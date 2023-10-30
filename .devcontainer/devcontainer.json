@@ -1,0 +1,57 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+  "name": "go",
+  "image": "mcr.microsoft.com/devcontainers/base:bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.20"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers-contrib/features/kops:1": {
+      "version": "latest"
+    },
+    "ghcr.io/mpriscella/features/sops:1": {},
+    "ghcr.io/mpriscella/features/kind:1": {},
+    "ghcr.io/balazs23/devcontainers-features/bazel:1": {},
+    "ghcr.io/rio/features/skaffold:2": {},
+    "ghcr.io/rio/features/kustomize:1": {},
+
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+
+  // Configure tool-specific properties.
+  "remoteEnv": {
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+    "GOCACHE": "/tmp/gocache"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "googlecloudtools.cloudcode"
+      ]
+    }
+  },
+
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  "remoteUser": "root",
+
+  "mounts": [
+    "type=volume,source=vscode-extenstions,target=/root/.vscode-server/extensions,consistency=delegated",
+    "type=volume,source=aws-cred,target=/root/.aws,consistency=delegated",
+    "type=volume,source=k8s-cred,target=/root/.kube,consistency=delegated",
+
+    "type=volume,source=go-sdk-1-20,target=/usr/local/go,consistency=delegated",
+    "type=volume,source=go-path,target=/go,consistency=delegated",
+    "type=volume,source=go-cache,target=/tmp/gocache,consistency=delegated"
+  ]
+}
