@@ -1,0 +1,12 @@
+apiVersion: nodes.peppy-ratio.dev/v1alpha1
+kind: TaintRemover
+metadata:
+  labels:
+    app.kubernetes.io/name: taintremover
+    app.kubernetes.io/instance: taintremover-sample
+    app.kubernetes.io/part-of: taint-remover
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: taint-remover
+  name: taintremover-sample
+spec:
+  # TODO(user): Add fields here

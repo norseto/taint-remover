@@ -7,4 +7,13 @@ layout:
 - go.kubebuilder.io/v4
 projectName: taint-remover
 repo: github.com/norseto/taint-remover
+resources:
+- api:
+    crdVersion: v1
+  controller: true
+  domain: peppy-ratio.dev
+  group: nodes
+  kind: TaintRemover
+  path: github.com/norseto/taint-remover/api/v1alpha1
+  version: v1alpha1
 version: "3"

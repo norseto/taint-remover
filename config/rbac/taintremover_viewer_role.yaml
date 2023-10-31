@@ -1,0 +1,27 @@
+# permissions for end users to view taintremovers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: taintremover-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: taint-remover
+    app.kubernetes.io/part-of: taint-remover
+    app.kubernetes.io/managed-by: kustomize
+  name: taintremover-viewer-role
+rules:
+- apiGroups:
+  - nodes.peppy-ratio.dev
+  resources:
+  - taintremovers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nodes.peppy-ratio.dev
+  resources:
+  - taintremovers/status
+  verbs:
+  - get
