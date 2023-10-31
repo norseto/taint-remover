@@ -15,6 +15,8 @@
     "ghcr.io/devcontainers-contrib/features/kops:1": {
       "version": "latest"
     },
+    "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+    "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/mpriscella/features/sops:1": {},
     "ghcr.io/mpriscella/features/kind:1": {},
     "ghcr.io/balazs23/devcontainers-features/bazel:1": {},
