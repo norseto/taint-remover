@@ -1,0 +1,9 @@
+apiVersion: nodes.peppy-ratio.dev/v1alpha1
+kind: TaintRemover
+metadata:
+  name: oci
+spec:
+  taints:
+  - key: hoge
+    value: hoge
+    effect: NoSchedule

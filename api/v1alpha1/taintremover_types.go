@@ -25,6 +25,7 @@ SOFTWARE.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,7 +34,7 @@ import (
 
 // TaintRemoverSpec defines the desired state of TaintRemover
 type TaintRemoverSpec struct {
-	Taints []string `json:"taints,omitempty"`
+	Taints []corev1.Taint `json:"taints,omitempty"`
 }
 
 // TaintRemoverStatus defines the observed state of TaintRemover
