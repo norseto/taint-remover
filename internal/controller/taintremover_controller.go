@@ -47,6 +47,13 @@ type TaintRemoverReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+type patchNodeSpec struct {
+	Taints []corev1.Taint `json:"taints"`
+}
+type patchNode struct {
+	Spec patchNodeSpec `json:"spec"`
+}
+
 //+kubebuilder:rbac:groups=nodes.peppy-ratio.dev,resources=taintremovers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nodes.peppy-ratio.dev,resources=taintremovers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nodes.peppy-ratio.dev,resources=taintremovers/finalizers,verbs=update
@@ -116,7 +123,12 @@ func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint,
 
 	var taints []corev1.Taint
 	for _, v := range removers.Items {
-		taints = append(taints, v.Spec.Taints...)
+		for _, t := range v.Spec.Taints {
+			if tutil.TaintExists(taints, &t) {
+				continue
+			}
+			taints = append(taints, t)
+		}
 	}
 
 	return taints, nil
@@ -165,11 +177,13 @@ func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev
 		}
 		log.Info("Taint check", "NeedPatch", needPatch)
 		if needPatch {
-			data, err := json.Marshal(node.Spec.Taints)
+			patchNode := patchNode{Spec: patchNodeSpec{Taints: node.Spec.Taints}}
+			data, err := json.Marshal(patchNode)
 			if err != nil {
 				return err
 			}
-			patch := client.RawPatch(types.MergePatchType, data)
+			log.Info("Taint remove", "Patch", string(data))
+			patch := client.RawPatch(types.StrategicMergePatchType, data)
 			r.Client.Patch(ctx, &n, patch)
 		}
 	}

@@ -1,7 +1,7 @@
 apiVersion: nodes.peppy-ratio.dev/v1alpha1
 kind: TaintRemover
 metadata:
-  name: oci
+  name: k3d-k3s-default-server-0
 spec:
   taints:
   - key: hoge
