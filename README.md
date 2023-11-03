@@ -1,2 +1,2 @@
 # Taint Remover
-Automatic taints added by cloud provider to spot(preenmting) instance node.
+Remove Spot Instance taints set by the cloud provider.

@@ -77,7 +77,7 @@ func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if len(taints) < 1 {
 		return reconcile.Result{}, nil
 	}
-	log.Info("Got taints", "taints", taints)
+	log.Info("Got CRD targets", "taints", taints)
 
 	nodes, err := r.getTargetNodes(ctx, req.NamespacedName)
 	if err != nil {
@@ -112,7 +112,7 @@ func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint,
 	log := log.FromContext(ctx)
 
 	removers := &nodesv1alpha1.TaintRemoverList{}
-	err := r.Client.List(ctx, removers)
+	err := r.List(ctx, removers)
 	if err != nil {
 		log.Error(err, "Failed to get Remover")
 		return nil, err
@@ -147,7 +147,7 @@ func (r *TaintRemoverReconciler) getTargetNodes(ctx context.Context, name types.
 		return nil, err
 	}
 	list := &corev1.NodeList{}
-	err = r.Client.List(ctx, list)
+	err = r.List(ctx, list)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev
 			}
 			log.Info("Taint remove", "Patch", string(data))
 			patch := client.RawPatch(types.StrategicMergePatchType, data)
-			r.Client.Patch(ctx, &n, patch)
+			r.Patch(ctx, &n, patch)
 		}
 	}
 	return nil
