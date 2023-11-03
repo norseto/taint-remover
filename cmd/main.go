@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	taintremover "github.com/norseto/taint-remover"
 	nodesv1alpha1 "github.com/norseto/taint-remover/api/v1alpha1"
 	"github.com/norseto/taint-remover/internal/controller"
 	//+kubebuilder:scaffold:imports
@@ -73,6 +74,9 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	ctrl.Log.Info("Starting TaintRemover", "version", taintremover.RELEASE_VERSION,
+		"GitVersion", taintremover.GitVersion)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

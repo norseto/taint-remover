@@ -1,8 +1,0 @@
-apiVersion: nodes.peppy-ratio.dev/v1alpha1
-kind: TaintRemover
-metadata:
-  name: oracle-oke
-spec:
-  taints:
-  - key: oci.oraclecloud.com/oke-is-preemptible
-    effect: NoSchedule
