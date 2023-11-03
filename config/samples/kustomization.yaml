@@ -1,3 +1,5 @@
+namespace: taint-remover-system
+
 ## Append samples of your project ##
 resources:
 - nodes_v1alpha1_taintremover.yaml

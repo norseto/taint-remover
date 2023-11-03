@@ -1,2 +1,7 @@
 resources:
 - manager.yaml
+
+images:
+- name: controller
+  newName: norseto/taint-remover
+  newTag: v0.1.0-alpha.1
