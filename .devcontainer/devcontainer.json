@@ -16,6 +16,7 @@
       "version": "latest"
     },
     "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/mpriscella/features/sops:1": {},
     "ghcr.io/mpriscella/features/kind:1": {},
