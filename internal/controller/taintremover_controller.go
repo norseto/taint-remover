@@ -31,9 +31,7 @@ import (
 	tutil "github.com/norseto/taint-remover/internal/taints"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -106,14 +104,6 @@ func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	meta := &metav1.PartialObjectMetadata{}
-	meta.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Node",
-	})
-
-	// client, _ := kubernetes.NewForConfig(ctrl.GetConfigOrDie())
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nodesv1alpha1.TaintRemover{}).
 		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Node{}),
@@ -163,6 +153,7 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 	return nil
 }
 
+// getTaints gets all remove target taints in all TaintRemovers
 func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint, error) {
 	log := log.FromContext(ctx)
 
@@ -189,6 +180,7 @@ func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint,
 	return taints, nil
 }
 
+// getTargetNodes gets all nodes that has any taints.
 func (r *TaintRemoverReconciler) getTargetNodes(ctx context.Context) ([]corev1.Node, error) {
 	var nodes []corev1.Node
 
@@ -207,6 +199,7 @@ func (r *TaintRemoverReconciler) getTargetNodes(ctx context.Context) ([]corev1.N
 	return nodes, err
 }
 
+// removeTaints removes all taints from target nodes
 func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev1.Node, taints []corev1.Taint) (int, error) {
 	log := log.FromContext(ctx)
 	removed := 0
