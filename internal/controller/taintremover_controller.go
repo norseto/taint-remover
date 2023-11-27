@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nodesv1alpha1 "github.com/norseto/taint-remover/api/v1alpha1"
 )
@@ -106,8 +105,7 @@ func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nodesv1alpha1.TaintRemover{}).
-		WatchesRawSource(source.Kind(mgr.GetCache(), &corev1.Node{}),
-			&nodeHandler{r: r},
+		Watches(&corev1.Node{}, &nodeHandler{r: r},
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
 }
