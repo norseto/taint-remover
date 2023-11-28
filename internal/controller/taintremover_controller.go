@@ -112,8 +112,6 @@ func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // findTaintsForNode finds target taints and remove
 func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node client.Object) error {
-	var nodes []corev1.Node
-
 	log := log.FromContext(ctx)
 
 	log.Info("findTaintsForNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
@@ -130,10 +128,11 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 		return err
 	}
 
-	if len(found.Spec.Taints) > 0 {
-		nodes = append(nodes, *found.DeepCopy())
+	if len(found.Spec.Taints) < 1 {
+		return nil
 	}
 
+	nodes := []corev1.Node{*found.DeepCopy()}
 	taints, err := r.getTaints(ctx)
 	if err != nil {
 		log.Error(err, "failed to get taints")
