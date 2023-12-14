@@ -72,31 +72,31 @@ type patchNode struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
-func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
 
 	taints, err := r.getTaints(ctx)
 	if err != nil {
-		log.Error(err, "Failed to get config")
+		logger.Error(err, "Failed to get config")
 	}
 	if len(taints) < 1 {
 		return reconcile.Result{}, nil
 	}
-	log.Info("Got CRD targets", "taints", taints)
+	logger.Info("Got CRD targets", "taints", taints)
 
 	nodes, err := r.getTargetNodes(ctx)
 	if err != nil {
-		log.Error(err, "Failed to get nodes")
+		logger.Error(err, "Failed to get nodes")
 	}
 	if len(nodes) < 1 {
 		return reconcile.Result{}, nil
 	}
-	log.Info("Got nodes", "tainted nodes", len(nodes))
+	logger.Info("Got nodes", "tainted nodes", len(nodes))
 	removed, err := r.removeTaints(ctx, nodes, taints)
 	if err != nil {
-		log.Error(err, "Failed to remove taints")
+		logger.Error(err, "Failed to remove taints")
 	}
-	log.Info("removed taints", "removed", removed)
+	logger.Info("removed taints", "removed", removed)
 
 	return ctrl.Result{}, err
 }
@@ -112,9 +112,9 @@ func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // findTaintsForNode finds target taints and remove
 func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node client.Object) error {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	log.Info("findTaintsForNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
+	logger.Info("findTaintsForNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
 	found := &corev1.Node{}
 	criterion := types.NamespacedName{
 		Name: node.GetName(),
@@ -123,7 +123,7 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 	err := r.Get(ctx, criterion, found)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			log.Error(err, "could not find the node", "criteria", criterion)
+			logger.Error(err, "could not find the node", "criteria", criterion)
 		}
 		return err
 	}
@@ -135,29 +135,29 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 	nodes := []corev1.Node{*found.DeepCopy()}
 	taints, err := r.getTaints(ctx)
 	if err != nil {
-		log.Error(err, "failed to get taints")
+		logger.Error(err, "failed to get taints")
 		return err
 	}
 
-	log.Info("findTaintsForNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
+	logger.Info("findTaintsForNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
 	removed, err := r.removeTaints(ctx, nodes, taints)
 	if err != nil {
-		log.Error(err, "failed to remove taints")
+		logger.Error(err, "failed to remove taints")
 		return err
 	}
-	log.Info("removed taints", "removed", removed)
+	logger.Info("removed taints", "removed", removed)
 
 	return nil
 }
 
 // getTaints gets all remove target taints in all TaintRemovers
 func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	removers := &nodesv1alpha1.TaintRemoverList{}
 	err := r.List(ctx, removers)
 	if err != nil {
-		log.Error(err, "Failed to get Remover")
+		logger.Error(err, "Failed to get Remover")
 		return nil, err
 	}
 	if len(removers.Items) < 1 {
@@ -198,7 +198,7 @@ func (r *TaintRemoverReconciler) getTargetNodes(ctx context.Context) ([]corev1.N
 
 // removeTaints removes all taints from target nodes
 func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev1.Node, taints []corev1.Taint) (int, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 	removed := 0
 
 	for _, n := range nodes {
@@ -210,18 +210,21 @@ func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev
 				return removed, err
 			}
 			node = newNode
-			needPatch = (needPatch || changed)
+			needPatch = needPatch || changed
 		}
-		log.Info("Taint check", "NeedPatch", needPatch)
+		logger.Info("Taint check", "NeedPatch", needPatch)
 		if needPatch {
 			patchNode := patchNode{Spec: patchNodeSpec{Taints: node.Spec.Taints}}
 			data, err := json.Marshal(patchNode)
 			if err != nil {
 				return removed, err
 			}
-			log.Info("Taint remove", "Patch", string(data))
+			logger.Info("Taint remove", "Patch", string(data))
 			patch := client.RawPatch(types.StrategicMergePatchType, data)
-			r.Patch(ctx, &n, patch)
+			err = r.Patch(ctx, &n, patch)
+			if err != nil {
+				return removed, err
+			}
 			removed++
 		}
 	}
@@ -232,15 +235,15 @@ type nodeHandler struct {
 	r *TaintRemoverReconciler
 }
 
-func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, rlmit workqueue.RateLimitingInterface) {
-	nh.r.findTaintsForNode(ctx, evt.Object)
+func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
+	_ = nh.r.findTaintsForNode(ctx, evt.Object)
 }
-func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, rlmit workqueue.RateLimitingInterface) {
-	nh.r.findTaintsForNode(ctx, evt.ObjectNew)
+func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
+	_ = nh.r.findTaintsForNode(ctx, evt.ObjectNew)
 }
-func (nh *nodeHandler) Delete(ctx context.Context, evt event.DeleteEvent, rlmit workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {
 	// No-op
 }
-func (nh *nodeHandler) Generic(ctx context.Context, evt event.GenericEvent, rlmit workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Generic(context.Context, event.GenericEvent, workqueue.RateLimitingInterface) {
 	// No-op
 }
