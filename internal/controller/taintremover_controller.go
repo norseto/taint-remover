@@ -27,7 +27,6 @@ package controller
 import (
 	"context"
 	"encoding/json"
-
 	tutil "github.com/norseto/taint-remover/internal/taints"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -110,26 +109,15 @@ func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// findTaintsForNode finds target taints and remove
-func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node client.Object) error {
+// applyTaintRemoveOnNode apply the removed taints on the new or updated Node.
+func (r *TaintRemoverReconciler) applyTaintRemoveOnNode(ctx context.Context, node client.Object) error {
 	logger := log.FromContext(ctx)
 
-	logger.Info("findTaintsForNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
-	found := &corev1.Node{}
-	criterion := types.NamespacedName{
-		Name: node.GetName(),
-	}
-
-	err := r.Get(ctx, criterion, found)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			logger.Error(err, "could not find the node", "criteria", criterion)
-		}
+	logger.Info("applyTaintRemoveOnNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
+	var found *corev1.Node
+	var err error
+	if found, err = r.getNodeAndCheckTaints(ctx, node); err != nil || found == nil {
 		return err
-	}
-
-	if len(found.Spec.Taints) < 1 {
-		return nil
 	}
 
 	nodes := []corev1.Node{*found.DeepCopy()}
@@ -139,7 +127,7 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 		return err
 	}
 
-	logger.Info("findTaintsForNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
+	logger.Info("applyTaintRemoveOnNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
 	removed, err := r.removeTaints(ctx, nodes, taints)
 	if err != nil {
 		logger.Error(err, "failed to remove taints")
@@ -150,7 +138,32 @@ func (r *TaintRemoverReconciler) findTaintsForNode(ctx context.Context, node cli
 	return nil
 }
 
-// getTaints gets all remove target taints in all TaintRemovers
+// getNodeAndCheckTaints retrieves the specified node object and checks if it has any taints.
+// If the node is not found or does not have any taints, it returns nil.
+// Otherwise, it returns the node object.
+func (r *TaintRemoverReconciler) getNodeAndCheckTaints(ctx context.Context, node client.Object) (*corev1.Node, error) {
+	logger := log.FromContext(ctx)
+	criterion := types.NamespacedName{
+		Name: node.GetName(),
+	}
+	found := &corev1.Node{}
+
+	err := r.Get(ctx, criterion, found)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "could not find the node", "criteria", criterion)
+		}
+		return nil, err
+	}
+
+	if len(found.Spec.Taints) < 1 {
+		return nil, nil
+	}
+
+	return found, nil
+}
+
+// getTaints retrieves the list of taints from the TaintRemover objects in the cluster.
 func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint, error) {
 	logger := log.FromContext(ctx)
 
@@ -177,7 +190,12 @@ func (r *TaintRemoverReconciler) getTaints(ctx context.Context) ([]corev1.Taint,
 	return taints, nil
 }
 
-// getTargetNodes gets all nodes that has any taints.
+// getTargetNodes retrieves a list of nodes that have taints applied.
+// It queries the cluster for all nodes and checks if each node has any taints.
+// If a node has taints, it adds a deep copy of the node to the list of target nodes.
+//
+// This function returns the list of target nodes and an error, if any.
+// If the cluster query fails, it returns a nil slice of nodes and the error.
 func (r *TaintRemoverReconciler) getTargetNodes(ctx context.Context) ([]corev1.Node, error) {
 	var nodes []corev1.Node
 
@@ -202,33 +220,58 @@ func (r *TaintRemoverReconciler) removeTaints(ctx context.Context, nodes []corev
 	removed := 0
 
 	for _, n := range nodes {
-		node := &n
-		needPatch := false
-		for _, t := range taints {
-			newNode, changed, err := tutil.RemoveTaint(node, &t)
-			if err != nil {
-				return removed, err
-			}
-			node = newNode
-			needPatch = needPatch || changed
-		}
+		newTaints, needPatch := r.excludeTaintsFromNode(&n, taints)
 		logger.Info("Taint check", "NeedPatch", needPatch)
-		if needPatch {
-			patchNode := patchNode{Spec: patchNodeSpec{Taints: node.Spec.Taints}}
-			data, err := json.Marshal(patchNode)
-			if err != nil {
-				return removed, err
-			}
-			logger.Info("Taint remove", "Patch", string(data))
-			patch := client.RawPatch(types.StrategicMergePatchType, data)
-			err = r.Patch(ctx, &n, patch)
-			if err != nil {
-				return removed, err
-			}
-			removed++
+		if !needPatch {
+			continue
 		}
+		err := r.patchNodeWithNewTaints(ctx, &n, newTaints)
+		if err != nil {
+			logger.Error(err, "Failed to patch node")
+			return removed, err
+		}
+		removed++
 	}
 	return removed, nil
+}
+
+// excludeTaintsFromNode removes the specified taints from the target node.
+// It returns the updated list of taints after removing the specified taints,
+// as well as a boolean indicating whether any taints were removed.
+func (r *TaintRemoverReconciler) excludeTaintsFromNode(target *corev1.Node, taints []corev1.Taint) ([]corev1.Taint, bool) {
+	if target == nil {
+		return nil, false
+	}
+	nodeTaints := target.Spec.Taints
+	deleted := false
+	for _, taint := range taints {
+		if !tutil.TaintExists(nodeTaints, &taint) {
+			continue
+		}
+		var taintDeleted bool
+		nodeTaints, taintDeleted = tutil.DeleteTaint(nodeTaints, &taint)
+		deleted = deleted || taintDeleted
+	}
+	return nodeTaints, deleted
+}
+
+// patchNodeWithNewTaints is a method that patches a given node with new taints.
+// It takes a context, a pointer to a corev1.Node object representing the node to be patched,
+// and a slice of corev1.Taint representing the new taints.
+// It marshals the new taints into a JSON patch, and applies the patch to the node.
+// Returns an error if there was a problem with marshaling or patching the node.
+func (r *TaintRemoverReconciler) patchNodeWithNewTaints(ctx context.Context, node *corev1.Node, taints []corev1.Taint) error {
+	logger := log.FromContext(ctx)
+
+	patchNode := patchNode{Spec: patchNodeSpec{Taints: taints}}
+	data, err := json.Marshal(patchNode)
+	if err != nil {
+		logger.Error(err, "Failed to marshal node patch")
+		return err
+	}
+	logger.Info("Taint remove", "Patch", string(data))
+	patch := client.RawPatch(types.StrategicMergePatchType, data)
+	return r.Patch(ctx, node, patch)
 }
 
 type nodeHandler struct {
@@ -236,10 +279,10 @@ type nodeHandler struct {
 }
 
 func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
-	_ = nh.r.findTaintsForNode(ctx, evt.Object)
+	_ = nh.r.applyTaintRemoveOnNode(ctx, evt.Object)
 }
 func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
-	_ = nh.r.findTaintsForNode(ctx, evt.ObjectNew)
+	_ = nh.r.applyTaintRemoveOnNode(ctx, evt.ObjectNew)
 }
 func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {
 	// No-op
