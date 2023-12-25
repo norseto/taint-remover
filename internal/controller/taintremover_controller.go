@@ -109,14 +109,13 @@ func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// applyTaintRemoveOnNode apply the removed taints on the new or updated Node.
+// applyTaintRemoveOnNode applies the removed taints on the new or updated Node.
 func (r *TaintRemoverReconciler) applyTaintRemoveOnNode(ctx context.Context, node client.Object) error {
 	logger := log.FromContext(ctx)
-
 	logger.Info("applyTaintRemoveOnNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
-	var found *corev1.Node
-	var err error
-	if found, err = r.getNodeAndCheckTaints(ctx, node); err != nil || found == nil {
+
+	found, err := r.getNodeAndCheckTaints(ctx, node)
+	if err != nil || found == nil {
 		return err
 	}
 
@@ -126,15 +125,14 @@ func (r *TaintRemoverReconciler) applyTaintRemoveOnNode(ctx context.Context, nod
 		logger.Error(err, "failed to get taints")
 		return err
 	}
-
 	logger.Info("applyTaintRemoveOnNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
+
 	removed, err := r.removeTaints(ctx, nodes, taints)
 	if err != nil {
 		logger.Error(err, "failed to remove taints")
 		return err
 	}
 	logger.Info("removed taints", "removed", removed)
-
 	return nil
 }
 
@@ -274,6 +272,7 @@ func (r *TaintRemoverReconciler) patchNodeWithNewTaints(ctx context.Context, nod
 	return r.Patch(ctx, node, patch)
 }
 
+// nodeHandler is a struct that implements the EventHandler interface.
 type nodeHandler struct {
 	r *TaintRemoverReconciler
 }
@@ -281,12 +280,15 @@ type nodeHandler struct {
 func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
 	_ = nh.r.applyTaintRemoveOnNode(ctx, evt.Object)
 }
+
 func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
 	_ = nh.r.applyTaintRemoveOnNode(ctx, evt.ObjectNew)
 }
+
 func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {
 	// No-op
 }
+
 func (nh *nodeHandler) Generic(context.Context, event.GenericEvent, workqueue.RateLimitingInterface) {
 	// No-op
 }
