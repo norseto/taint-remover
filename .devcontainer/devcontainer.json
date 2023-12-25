@@ -15,7 +15,7 @@
     "ghcr.io/devcontainers-contrib/features/kops:1": {
       "version": "latest"
     },
-    "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+//    "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/mpriscella/features/sops:1": {},
@@ -23,11 +23,11 @@
     "ghcr.io/balazs23/devcontainers-features/bazel:1": {},
     "ghcr.io/rio/features/skaffold:2": {},
     "ghcr.io/rio/features/kustomize:1": {},
-    // "ghcr.io/audacioustux/devcontainers/operator-sdk:1": {},
+//    "ghcr.io/audacioustux/devcontainers/operator-sdk:1": {},
     "ghcr.io/audacioustux/devcontainers/kubebuilder:1": {},
 
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
-    // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+//    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
