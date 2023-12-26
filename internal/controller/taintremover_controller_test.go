@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -10,10 +11,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/norseto/taint-remover/api/v1alpha1"
+	nodesv1alpha1 "github.com/norseto/taint-remover/api/v1alpha1"
 )
 
 var _ = Describe("TaintRemoverReconciler", func() {
@@ -188,6 +191,41 @@ var _ = Describe("TaintRemoverReconciler", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
+	})
+
+	var _ = Describe("SetupWithManager", func() {
+		var (
+			mgr ctrl.Manager
+		)
+		BeforeEach(func() {
+			// Create a new manager
+			var err error
+
+			mgr, err = ctrl.NewManager(cfg, ctrl.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a new reconciler
+			r := &TaintRemoverReconciler{
+				Client: client,
+				Scheme: scheme,
+			}
+
+			// Setup the reconciler with the manager
+			err = r.SetupWithManager(mgr)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should set up watches", func() {
+			// Check if the reconciler is watching TaintRemover objects
+			watches, err := mgr.GetCache().GetInformer(ctx, &nodesv1alpha1.TaintRemover{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(watches).To(Not(BeNil()))
+
+			// Check if the reconciler is watching Node objects
+			watches, err = mgr.GetCache().GetInformer(ctx, &corev1.Node{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(watches).To(Not(BeNil()))
 		})
 	})
 })
