@@ -21,19 +21,32 @@ var _ = Describe("TaintRemoverReconciler", func() {
 		ctx    context.Context
 		client client.Client
 		scheme *runtime.Scheme
+		tr     *v1alpha1.TaintRemover
+		node   *corev1.Node
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		client = k8sClient
 		scheme = runtime.NewScheme()
+		tr = nil
+		node = nil
+	})
+
+	AfterEach(func() {
+		if tr != nil {
+			Expect(client.Delete(ctx, tr)).To(Succeed())
+		}
+		if node != nil {
+			Expect(client.Delete(ctx, node)).To(Succeed())
+		}
 	})
 
 	Describe("Reconcile", func() {
 		Context("When there are taints and nodes", func() {
 			It("should remove taints from nodes", func() {
 				// Create a TaintRemover object
-				tr := &v1alpha1.TaintRemover{
+				tr = &v1alpha1.TaintRemover{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-taint-remover",
 					},
@@ -50,7 +63,7 @@ var _ = Describe("TaintRemoverReconciler", func() {
 				Expect(client.Create(ctx, tr)).To(Succeed())
 
 				// Create a Node object with taints
-				node := &corev1.Node{
+				node = &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-node",
 					},
@@ -65,6 +78,8 @@ var _ = Describe("TaintRemoverReconciler", func() {
 					},
 				}
 				Expect(client.Create(ctx, node)).To(Succeed())
+				// not-ready taint will be added.
+				Expect(node.Spec.Taints).To(HaveLen(2))
 
 				// Reconcile the TaintRemover object
 				reconciler := &TaintRemoverReconciler{
@@ -84,14 +99,14 @@ var _ = Describe("TaintRemoverReconciler", func() {
 					Name: node.Name,
 				}
 				Expect(client.Get(ctx, nodeKey, node)).To(Succeed())
-				Expect(node.Spec.Taints).To(BeEmpty())
+				Expect(node.Spec.Taints).To(HaveLen(1))
 			})
 		})
 
 		Context("When there are no taints", func() {
 			It("should not remove taints from nodes", func() {
 				// Create a TaintRemover object
-				tr := &v1alpha1.TaintRemover{
+				tr = &v1alpha1.TaintRemover{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-taint-remover",
 					},
@@ -102,7 +117,7 @@ var _ = Describe("TaintRemoverReconciler", func() {
 				Expect(client.Create(ctx, tr)).To(Succeed())
 
 				// Create a Node object with taints
-				node := &corev1.Node{
+				node = &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-node",
 					},
@@ -117,6 +132,7 @@ var _ = Describe("TaintRemoverReconciler", func() {
 					},
 				}
 				Expect(client.Create(ctx, node)).To(Succeed())
+				Expect(node.Spec.Taints).To(HaveLen(2))
 
 				// Reconcile the TaintRemover object
 				reconciler := &TaintRemoverReconciler{
@@ -136,14 +152,14 @@ var _ = Describe("TaintRemoverReconciler", func() {
 					Name: node.Name,
 				}
 				Expect(client.Get(ctx, nodeKey, node)).To(Succeed())
-				Expect(node.Spec.Taints).To(HaveLen(1))
+				Expect(node.Spec.Taints).To(HaveLen(2))
 			})
 		})
 
 		Context("When there are no nodes", func() {
 			It("should not remove taints", func() {
 				// Create a TaintRemover object
-				tr := &v1alpha1.TaintRemover{
+				tr = &v1alpha1.TaintRemover{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-taint-remover",
 					},
