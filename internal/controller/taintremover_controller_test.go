@@ -140,7 +140,7 @@ var _ = Describe("SetupWithManager", func() {
 			Scheme: scheme,
 		}
 
-		// Setup the reconciler with the manager
+		// Set up the reconciler with the manager
 		err = r.SetupWithManager(mgr)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -162,7 +162,6 @@ var _ = Describe("internalMethods", func() {
 	var (
 		ctx    context.Context
 		client client.Client
-		scheme *runtime.Scheme
 		tr     *v1alpha1.TaintRemover
 		node   *corev1.Node
 	)
@@ -170,7 +169,6 @@ var _ = Describe("internalMethods", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 		client = k8sClient
-		scheme = runtime.NewScheme()
 		tr = nil
 		node = nil
 	})
@@ -190,12 +188,7 @@ var _ = Describe("internalMethods", func() {
 				// Create a TaintRemover object
 				node, tr = setupNodeAndRemover(fooBarTaint, fooBarTaint)
 
-				// Reconcile the TaintRemover object
-				reconciler := &TaintRemoverReconciler{
-					Client: client,
-					Scheme: scheme,
-				}
-				err := reconciler.applyTaintRemoveOnNode(ctx, node)
+				err := applyTaintRemoveOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have been removed from the node
@@ -212,12 +205,7 @@ var _ = Describe("internalMethods", func() {
 				// Create a TaintRemover object
 				node, tr = setupNodeAndRemover(fooBarTaint, emptyTait)
 
-				// Reconcile the TaintRemover object
-				reconciler := &TaintRemoverReconciler{
-					Client: client,
-					Scheme: scheme,
-				}
-				err := reconciler.applyTaintRemoveOnNode(ctx, node)
+				err := applyTaintRemoveOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have not been removed from the node
@@ -234,12 +222,7 @@ var _ = Describe("internalMethods", func() {
 				// Create a TaintRemover object
 				node = createNodeWithTaints(fooBarTaint)
 
-				// Reconcile the TaintRemover object
-				reconciler := &TaintRemoverReconciler{
-					Client: client,
-					Scheme: scheme,
-				}
-				err := reconciler.applyTaintRemoveOnNode(ctx, node)
+				err := applyTaintRemoveOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have not been removed from the node
@@ -265,7 +248,7 @@ var emptyTait []corev1.Taint
 // setupNodeAndRemover creates a new Node object and a new TaintRemover object and returns them.
 // It uses the createTaintRemover and createNodeWithTaints functions to create these objects.
 // The taints provided as input are used to create the TaintRemover object and the node is created
-// with taints specified by node parameter.
+// with taints specified by node parameter. The node is created with a not-ready taint by default.
 // The newly created TaintRemover and Node objects are then returned.
 func setupNodeAndRemover(node, remover []corev1.Taint) (*corev1.Node, *nodesv1alpha1.TaintRemover) {
 	tr := createTaintRemover(remover)
