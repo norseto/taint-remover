@@ -50,19 +50,20 @@ type TaintRemoverReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-type nodePatches struct {
+// nodePatchSpec represents a node object and its patch.
+type nodePatchSpec struct {
 	node  *corev1.Node
 	patch *nodePatch
 }
 
-// nodePatchSpec defines the specification for patching a node's taints.
-type nodePatchSpec struct {
+// nodeSpecPatch defines the specification for patching a node's taints.
+type nodeSpecPatch struct {
 	Taints []corev1.Taint `json:"taints"`
 }
 
 // nodePatch represents a patch for a node object
 type nodePatch struct {
-	Spec nodePatchSpec `json:"spec"`
+	Spec nodeSpecPatch `json:"spec"`
 }
 
 //+kubebuilder:rbac:groups=nodes.peppy-ratio.dev,resources=taintremovers,verbs=get;list;watch;create;update;patch;delete
@@ -248,16 +249,16 @@ func removeTaints(ctx context.Context, c client.Client, nodes []*corev1.Node, ta
 }
 
 // makePatches creates patch objects for nodes that need taint updates
-func makePatches(nodes []*corev1.Node, taints []*corev1.Taint) []nodePatches {
-	var result []nodePatches
+func makePatches(nodes []*corev1.Node, taints []*corev1.Taint) []nodePatchSpec {
+	var result []nodePatchSpec
 
 	for _, n := range nodes {
 		newTaints, needPatch := makeNewTaintsForNode(n, taints)
 		if !needPatch {
 			continue
 		}
-		patch := nodePatch{Spec: nodePatchSpec{Taints: newTaints}}
-		result = append(result, nodePatches{node: n.DeepCopy(), patch: &patch})
+		patch := nodePatch{Spec: nodeSpecPatch{Taints: newTaints}}
+		result = append(result, nodePatchSpec{node: n.DeepCopy(), patch: &patch})
 	}
 	return result
 }
