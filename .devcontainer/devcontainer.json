@@ -41,6 +41,9 @@
   },
   "customizations": {
     "vscode": {
+      "settings": {
+        "git.enabled": false
+      },
       "extensions": [
         "editorconfig.editorconfig",
         "googlecloudtools.cloudcode"
