@@ -12,7 +12,7 @@ PAT_ALPHA_OR_BETA='^[0-9]+[.][0-9]+[.]0-(alpha|beta)[.][1-9][0-9]*$'
 PAT_RELEASE='^([0-9]+[.][0-9]+)[.][0-9]+$'
 PAT_BETA_OR_RELEASE='(^[0-9]+[.][0-9]+[.]0+)(-beta[.][1-9][0-9]*)?$'
 
-CURRENT_VERSION=$(grep 'RELEASE_VERSION\s*=' version.go  | awk -F= '{print $2}' | sed -e 's_"__g' -e  's/\s//g')
+CURRENT_VERSION=$(grep 'RELEASE_VERSION\s*=' version.go  | awk -F= '{print $2}' | sed -e 's_"__g' -e 's/[[:space:]]//g')
 
 if [[ ! "${CURRENT_VERSION}" =~ ${PAT_VERSION} ]]; then
   echo "Current version ${CURRENT_VERSION} is invalid. It must be 'X.Y.Z', 'X.Y.0-alpha.N' or 'X.Y.0-beta.N'"
