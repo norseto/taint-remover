@@ -10,9 +10,9 @@ PAT_VERSION='^([0-9]+[.][0-9]+)[.]([0-9]+|0-(alpha|beta)[.][1-9][0-9]*)$'
 PAT_ALPHA='(^[0-9]+[.][0-9]+[.]0+)-alpha[.][1-9][0-9]*$'
 PAT_ALPHA_OR_BETA='^[0-9]+[.][0-9]+[.]0-(alpha|beta)[.][1-9][0-9]*$'
 PAT_RELEASE='^([0-9]+[.][0-9]+)[.][0-9]+$'
-PAT_BETA_OR_RELEASE='(^[0-9]+[.][0-9]+[.]0+)(-beta[.][1-9][0-9]*)?$'
+PAT_BETA_OR_RELEASE='(^[0-9]+[.][0-9]+[.])([0-9]+|0-beta[.][1-9][0-9]*)$'
 
-CURRENT_VERSION=$(grep 'RELEASE_VERSION\s*=' version.go  | awk -F= '{print $2}' | sed -e 's_"__g' -e 's/[[:space:]]//g')
+CURRENT_VERSION=$(grep 'RELEASE_VERSION[[:space:]]*=' version.go  | awk -F= '{print $2}' | sed -e 's_"__g' -e 's/[[:space:]]//g')
 
 if [[ ! "${CURRENT_VERSION}" =~ ${PAT_VERSION} ]]; then
   echo "Current version ${CURRENT_VERSION} is invalid. It must be 'X.Y.Z', 'X.Y.0-alpha.N' or 'X.Y.0-beta.N'"
@@ -51,5 +51,5 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 BASE_DIR=${SCRIPT_DIR}/..
 
-sed -i.bak -e "s@newTag:\s*v${CURRENT_VERSION}@newTag: v${NEW_VERSION}@g" ${BASE_DIR}/config/manager/kustomization.yaml
-sed -i.bak -e "s@RELEASE_VERSION\s*=\s*\"${CURRENT_VERSION}\"@RELEASE_VERSION = \"${NEW_VERSION}\"@g" ${BASE_DIR}/version.go
+sed -i.bak -e "s@newTag:[[:space:]]*v${CURRENT_VERSION}@newTag: v${NEW_VERSION}@g" ${BASE_DIR}/config/manager/kustomization.yaml
+sed -i.bak -e "s@RELEASE_VERSION[[:space:]]*=[[:space:]]*\"${CURRENT_VERSION}\"@RELEASE_VERSION = \"${NEW_VERSION}\"@g" ${BASE_DIR}/version.go
