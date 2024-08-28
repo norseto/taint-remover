@@ -5,7 +5,7 @@
   "image": "mcr.microsoft.com/devcontainers/base:bullseye",
   "features": {
     "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.20"
+      "version": "1.23"
     },
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "version": "latest",
@@ -58,8 +58,9 @@
     "type=volume,source=aws-cred,target=/root/.aws,consistency=delegated",
     "type=volume,source=oci-k8s-cred,target=/root/.kube,consistency=delegated",
 
-    "type=volume,source=go-sdk-1-20,target=/usr/local/go,consistency=delegated",
+    "type=volume,source=go-sdk-1-23,target=/usr/local/go,consistency=delegated",
     "type=volume,source=go-path,target=/go,consistency=delegated",
-    "type=volume,source=go-cache,target=/tmp/gocache,consistency=delegated"
+    "type=volume,source=go-cache,target=/tmp/gocache,consistency=delegated",
+    "type=volume,source=jetbrains-taint-remover,target=/root/.cache/JetBrains,consistency=delegated"
   ]
 }
