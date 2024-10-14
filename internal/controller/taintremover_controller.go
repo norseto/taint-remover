@@ -27,6 +27,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+
 	tutil "github.com/norseto/taint-remover/internal/taints"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
