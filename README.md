@@ -4,12 +4,12 @@ Remove Spot Instance taints set by the cloud provider.
 # How to deploy to a cluster
 ## Deploy CRD, RBAC, Controller
 ```
-kubectl apply -k github.com/norseto/taint-remover/config/default?ref=release-0.1
+kubectl apply -k github.com/norseto/taint-remover/config/default?ref=release-0.4
 ```
 ## Deploy CR for OCI(Oracle Cloud)
 A sample is made for OCI.  
 ```
-kubectl apply -k github.com/norseto/taint-remover/config/samples?ref=release-0.1
+kubectl apply -k github.com/norseto/taint-remover/config/samples?ref=release-0.4
 ```
 
 You can examine the sample by `kubectl kustomize`
