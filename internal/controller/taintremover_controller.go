@@ -126,6 +126,7 @@ func applyTaintRemoveOnNode(ctx context.Context, c client.Client, node client.Ob
 
 	found, err := getNodeAndCheckTaints(ctx, c, node)
 	if err != nil || found == nil {
+		logger.V(2).Info("node not found or no taints", "node", node.GetName())
 		return err
 	}
 
