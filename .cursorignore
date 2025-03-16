@@ -1,0 +1,41 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/*
+Dockerfile.cross
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Kubernetes Generated files - skip generated files, except for vendored files
+
+!vendor/**/zz_generated.*
+
+# editor and IDE paraphernalia
+*.swp
+*.swo
+*~
+
+*.bak
+.*
+
+# Ignore all files in the vendor directory
+vendor/*
+
+# Ignore all files in the .git directory
+.git/*
+
+# Ignore all files in the .idea directory
+.idea/*
+
+# Ignore all files in the .vscode directory
+.vscode/*
+
