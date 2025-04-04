@@ -234,6 +234,83 @@ var _ = Describe("internalMethods", func() {
 			})
 		})
 	})
+
+	Describe("getNodeAndCheckTaints", func() {
+		Context("When node exists with taints", func() {
+			It("should return the node", func() {
+				// Create a node with taints
+				node = createNodeWithTaints(fooBarTaint)
+
+				foundNode, err := getNodeAndCheckTaints(ctx, client, node)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(foundNode).NotTo(BeNil())
+				Expect(foundNode.Name).To(Equal(node.Name))
+				Expect(foundNode.Spec.Taints).To(HaveLen(2))
+			})
+		})
+
+		Context("When node exists without taints", func() {
+			It("should return nil", func() {
+				// Create a node without taints
+				node = &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node-no-taints",
+					},
+				}
+				Expect(client.Create(ctx, node)).To(Succeed())
+
+				// Remove the automatically added taints
+				node.Spec.Taints = []corev1.Taint{}
+				Expect(client.Update(ctx, node)).To(Succeed())
+
+				foundNode, err := getNodeAndCheckTaints(ctx, client, node)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(foundNode).To(BeNil())
+			})
+		})
+
+		Context("When node does not exist", func() {
+			It("should return an error", func() {
+				nonExistentNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "non-existent-node",
+					},
+				}
+
+				foundNode, err := getNodeAndCheckTaints(ctx, client, nonExistentNode)
+				Expect(err).To(HaveOccurred())
+				Expect(foundNode).To(BeNil())
+			})
+		})
+	})
+
+	Describe("patchNode", func() {
+		Context("When patching a node", func() {
+			It("should apply the patch successfully", func() {
+				// Create a node
+				node = createNodeWithTaints(fooBarTaint)
+
+				// Create a patch to remove taints
+				patch := nodePatch{
+					Spec: nodeSpecPatch{
+						Taints: []corev1.Taint{},
+					},
+				}
+
+				// Apply the patch
+				err := patchNode(ctx, client, node, patch)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify the patch was applied
+				updatedNode := &corev1.Node{}
+				nodeKey := types.NamespacedName{
+					Name: node.Name,
+				}
+				Expect(client.Get(ctx, nodeKey, updatedNode)).To(Succeed())
+				Expect(updatedNode.Spec.Taints).To(HaveLen(0))
+			})
+		})
+	})
 })
 
 var fooBarTaint = []corev1.Taint{
