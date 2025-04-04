@@ -119,10 +119,10 @@ func (r *TaintRemoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// applyTaintRemoveOnNode applies the removed taints on the new or updated Node.
-func applyTaintRemoveOnNode(ctx context.Context, c client.Client, node client.Object) error {
+// applyRemoveTaintOnNode applies the removed taints on the new or updated Node.
+func applyRemoveTaintOnNode(ctx context.Context, c client.Client, node client.Object) error {
 	logger := log.FromContext(ctx)
-	logger.Info("applyTaintRemoveOnNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
+	logger.Info("applyRemoveTaintOnNode starting", "node", node.GetName(), "resver", node.GetResourceVersion())
 
 	found, err := getNodeAndCheckTaints(ctx, c, node)
 	if err != nil || found == nil {
@@ -136,7 +136,7 @@ func applyTaintRemoveOnNode(ctx context.Context, c client.Client, node client.Ob
 		logger.Error(err, "failed to get taints")
 		return err
 	}
-	logger.Info("applyTaintRemoveOnNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
+	logger.Info("applyRemoveTaintOnNode", "node taints", len(found.Spec.Taints), "target taints", len(taints))
 
 	removed, err := removeTaints(ctx, c, nodes, taints)
 	if err != nil {
@@ -305,11 +305,11 @@ type nodeHandler struct {
 }
 
 func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
-	_ = applyTaintRemoveOnNode(ctx, nh.r.Client, evt.Object)
+	_ = applyRemoveTaintOnNode(ctx, nh.r.Client, evt.Object)
 }
 
 func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
-	_ = applyTaintRemoveOnNode(ctx, nh.r.Client, evt.ObjectNew)
+	_ = applyRemoveTaintOnNode(ctx, nh.r.Client, evt.ObjectNew)
 }
 
 func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {

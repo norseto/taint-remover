@@ -182,13 +182,13 @@ var _ = Describe("internalMethods", func() {
 		}
 	})
 
-	Describe("applyTaintRemoveOnNode", func() {
+	Describe("applyRemoveTaintOnNode", func() {
 		Context("When there are taints and nodes", func() {
 			It("should remove taints from nodes", func() {
 				// Create a TaintRemover object
 				node, tr = setupNodeAndRemover(fooBarTaint, fooBarTaint)
 
-				err := applyTaintRemoveOnNode(ctx, client, node)
+				err := applyRemoveTaintOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have been removed from the node
@@ -205,7 +205,7 @@ var _ = Describe("internalMethods", func() {
 				// Create a TaintRemover object
 				node, tr = setupNodeAndRemover(fooBarTaint, emptyTait)
 
-				err := applyTaintRemoveOnNode(ctx, client, node)
+				err := applyRemoveTaintOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have not been removed from the node
@@ -222,7 +222,7 @@ var _ = Describe("internalMethods", func() {
 				// Create a TaintRemover object
 				node = createNodeWithTaints(fooBarTaint)
 
-				err := applyTaintRemoveOnNode(ctx, client, node)
+				err := applyRemoveTaintOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify that the taints have not been removed from the node
