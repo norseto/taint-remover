@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2023 Norihiro Seto
+Copyright (c) 2023-2025 Norihiro Seto
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,7 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
+		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		WebhookServer:          webhookServer,
 		LeaderElection:         enableLeaderElection,
