@@ -39,8 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/norseto/taint-remover/api/v1alpha1"
-	nodesv1alpha1 "github.com/norseto/taint-remover/api/v1alpha1"
+	v1alpha1 "github.com/norseto/taint-remover/api/v1alpha1"
 )
 
 var _ = Describe("TaintRemoverReconciler", func() {
@@ -98,7 +97,7 @@ var _ = Describe("TaintRemoverReconciler", func() {
 
 		Context("When there are no taints in remover", func() {
 			It("should not remove taints from nodes", func() {
-				node, tr = setupNodeAndRemover(fooBarTaint, emptyTait)
+				node, tr = setupNodeAndRemover(fooBarTaint, emptyTaint)
 
 				// Reconcile the TaintRemover object
 				reconciler := &TaintRemoverReconciler{
@@ -171,7 +170,7 @@ var _ = Describe("SetupWithManager", func() {
 
 	It("should set up watches", func() {
 		// Check if the reconciler is watching TaintRemover objects
-		watches, err := mgr.GetCache().GetInformer(ctx, &nodesv1alpha1.TaintRemover{})
+		watches, err := mgr.GetCache().GetInformer(ctx, &v1alpha1.TaintRemover{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(watches).To(Not(BeNil()))
 
@@ -227,7 +226,7 @@ var _ = Describe("internalMethods", func() {
 		Context("When there are no taints in remover", func() {
 			It("should not remove taints from nodes", func() {
 				// Create a TaintRemover object
-				node, tr = setupNodeAndRemover(fooBarTaint, emptyTait)
+				node, tr = setupNodeAndRemover(fooBarTaint, emptyTaint)
 
 				err := applyRemoveTaintOnNode(ctx, client, node)
 				Expect(err).NotTo(HaveOccurred())
@@ -344,14 +343,15 @@ var fooBarTaint = []corev1.Taint{
 		Effect: "NoSchedule",
 	},
 }
-var emptyTait []corev1.Taint
+
+var emptyTaint = []corev1.Taint{}
 
 // setupNodeAndRemover creates a new Node object and a new TaintRemover object and returns them.
 // It uses the createTaintRemover and createNodeWithTaints functions to create these objects.
 // The taints provided as input are used to create the TaintRemover object and the node is created
 // with taints specified by node parameter. The node is created with a not-ready taint by default.
 // The newly created TaintRemover and Node objects are then returned.
-func setupNodeAndRemover(node, remover []corev1.Taint) (*corev1.Node, *nodesv1alpha1.TaintRemover) {
+func setupNodeAndRemover(node, remover []corev1.Taint) (*corev1.Node, *v1alpha1.TaintRemover) {
 	tr := createTaintRemover(remover)
 	n := createNodeWithTaints(node)
 

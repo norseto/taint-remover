@@ -28,11 +28,14 @@ import (
 	"context"
 	"encoding/json"
 
+	"fmt"
+
 	tutil "github.com/norseto/taint-remover/internal/taints"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -91,7 +94,7 @@ func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, _ ctrl.Request) 
 	if len(taints) < 1 {
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Got CRD targets", "taints", taints)
+	logger.V(1).Info("Got CRD targets", "taints", taints)
 
 	nodes, err := getTaintedNodes(ctx, r.Client)
 	if err != nil {
@@ -100,12 +103,12 @@ func (r *TaintRemoverReconciler) Reconcile(ctx context.Context, _ ctrl.Request) 
 	if len(nodes) < 1 {
 		return reconcile.Result{}, nil
 	}
-	logger.Info("Got nodes", "tainted nodes", len(nodes))
+	logger.V(1).Info("Got nodes", "tainted nodes", len(nodes))
 	removed, err := removeTaints(ctx, r.Client, nodes, taints)
 	if err != nil {
 		logger.Error(err, "Failed to remove taints")
 	}
-	logger.Info("removed taints", "removed", removed)
+	logger.V(1).Info("removed taints", "removed", removed)
 
 	return ctrl.Result{}, err
 }
@@ -186,13 +189,18 @@ func getAllRemoveTaints(ctx context.Context, c client.Client) ([]*corev1.Taint, 
 		return nil, nil
 	}
 
+	// Use a set to efficiently track unique taints (key:effect)
+	uniqueTaintKeys := sets.New[string]()
 	var taints []corev1.Taint
 
 	for _, v := range removers.Items {
 		for _, t := range v.Spec.Taints {
-			if tutil.TaintExists(taints, &t) {
-				continue
+			// Create a unique key for the taint based on Key and Effect
+			taintKey := fmt.Sprintf("%s:%s", t.Key, t.Effect)
+			if uniqueTaintKeys.Has(taintKey) {
+				continue // Skip if already added
 			}
+			uniqueTaintKeys.Insert(taintKey)
 			taints = append(taints, t)
 		}
 	}
@@ -203,8 +211,8 @@ func getAllRemoveTaints(ctx context.Context, c client.Client) ([]*corev1.Taint, 
 // ConvertToPointerArray converts a slice of type T to a slice of pointers to T
 func ConvertToPointerArray[T any](arr []T) []*T {
 	result := make([]*T, len(arr))
-	for i, obj := range arr {
-		result[i] = &obj
+	for i := range arr {
+		result[i] = &arr[i]
 	}
 	return result
 }
