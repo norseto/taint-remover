@@ -314,14 +314,14 @@ var _ = Describe("internalMethods", func() {
 				node = createNodeWithTaints(fooBarTaint)
 
 				// Create a patch to remove taints
-				patch := nodePatch{
-					Spec: nodeSpecPatch{
+				patch := nodeSpecPatchPayload{
+					Spec: nodeSpecPatchSpec{
 						Taints: []corev1.Taint{},
 					},
 				}
 
 				// Apply the patch
-				err := patchNode(ctx, client, node, patch)
+				err := patchNode(ctx, client, node, &patch) // Pass by pointer
 				Expect(err).NotTo(HaveOccurred())
 
 				// Verify the patch was applied

@@ -54,20 +54,20 @@ type TaintRemoverReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// nodePatchSpec represents a node object and its patch.
-type nodePatchSpec struct {
+// nodeTaintsPatchSpec represents a node object and its patch.
+type nodeTaintsPatchSpec struct {
 	node  *corev1.Node
-	patch *nodePatch
+	patch *nodeSpecPatchPayload
 }
 
-// nodeSpecPatch defines the specification for patching a node's taints.
-type nodeSpecPatch struct {
+// nodeSpecPatchSpec defines the specification for patching a node's taints.
+type nodeSpecPatchSpec struct {
 	Taints []corev1.Taint `json:"taints"`
 }
 
-// nodePatch represents a patch for a node object
-type nodePatch struct {
-	Spec nodeSpecPatch `json:"spec"`
+// nodeSpecPatchPayload represents a patch for a node object
+type nodeSpecPatchPayload struct {
+	Spec nodeSpecPatchSpec `json:"spec"`
 }
 
 //+kubebuilder:rbac:groups=nodes.peppy-ratio.dev,resources=taintremovers,verbs=get;list;watch;create;update;patch;delete
@@ -243,10 +243,11 @@ func removeTaints(ctx context.Context, c client.Client, nodes []*corev1.Node, ta
 
 	patches := makePatches(nodes, taints)
 	for _, n := range patches {
-		err := patchNode(ctx, c, n.node, *n.patch)
-		if err != nil {
-			logger.Error(err, "Failed to patch node")
-			return removed, err
+		logger.Info("Removing taints from node", "node", n.node.Name)
+		if err := patchNode(ctx, c, n.node, n.patch); err != nil {
+			logger.Error(err, "Failed to patch node", "node", n.node.Name)
+			// Decide how to handle partial failures, e.g., continue or return error
+			continue // Example: Continue with other nodes
 		}
 		removed++
 	}
@@ -254,16 +255,16 @@ func removeTaints(ctx context.Context, c client.Client, nodes []*corev1.Node, ta
 }
 
 // makePatches creates patch objects for nodes that need taint updates
-func makePatches(nodes []*corev1.Node, taints []*corev1.Taint) []nodePatchSpec {
-	var result []nodePatchSpec
+func makePatches(nodes []*corev1.Node, taints []*corev1.Taint) []nodeTaintsPatchSpec {
+	var result []nodeTaintsPatchSpec
 
 	for _, n := range nodes {
 		newTaints, needPatch := makeNewTaintsForNode(n, taints)
 		if !needPatch {
 			continue
 		}
-		patch := nodePatch{Spec: nodeSpecPatch{Taints: newTaints}}
-		result = append(result, nodePatchSpec{node: n.DeepCopy(), patch: &patch})
+		patch := nodeSpecPatchPayload{Spec: nodeSpecPatchSpec{Taints: newTaints}}
+		result = append(result, nodeTaintsPatchSpec{node: n.DeepCopy(), patch: &patch})
 	}
 	return result
 }
@@ -289,16 +290,15 @@ func makeNewTaintsForNode(target *corev1.Node, taints []*corev1.Taint) ([]corev1
 }
 
 // patchNode patches the specified node object with the given patch.
-func patchNode(ctx context.Context, c client.Client, node *corev1.Node, patch any) error {
+func patchNode(ctx context.Context, c client.Client, node *corev1.Node, patch *nodeSpecPatchPayload) error {
 	logger := log.FromContext(ctx)
 
-	data, err := json.Marshal(patch)
+	patchBytes, err := json.Marshal(patch)
 	if err != nil {
-		logger.Error(err, "Failed to marshal node patch")
-		return err
+		return fmt.Errorf("failed to marshal node patch for node %s: %w", node.Name, err)
 	}
-	logger.Info("Apply node patch", "Patch", string(data))
-	raw := client.RawPatch(types.StrategicMergePatchType, data)
+	logger.Info("Apply node patch", "Patch", string(patchBytes))
+	raw := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	return c.Patch(ctx, node, raw)
 }
 
