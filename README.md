@@ -29,4 +29,9 @@ spec:
   taints:
   - effect: NoSchedule
     key: oci.oraclecloud.com/oke-is-preemptible
-```
+
+## License
+
+This project is primarily licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Additionally, certain components within the `internal/taints` directory are derived from Kubernetes (`k8s.io/kubernetes/pkg/util/taints`) and are licensed under the Apache License 2.0. The original copyright notices are preserved within the respective source files. A copy of the Apache License 2.0 can be found in the [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt) file.
