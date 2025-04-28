@@ -315,22 +315,22 @@ type nodeHandler struct {
 	r *TaintRemoverReconciler
 }
 
-func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Create(ctx context.Context, evt event.TypedCreateEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	if err := applyRemoveTaintOnNode(ctx, nh.r.Client, evt.Object); err != nil {
 		log.FromContext(ctx).Error(err, "Failed to apply taint removal on node creation", "node", evt.Object.GetName())
 	}
 }
 
-func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Update(ctx context.Context, evt event.TypedUpdateEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	if err := applyRemoveTaintOnNode(ctx, nh.r.Client, evt.ObjectNew); err != nil {
 		log.FromContext(ctx).Error(err, "Failed to apply taint removal on node update", "node", evt.ObjectNew.GetName())
 	}
 }
 
-func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Delete(context.Context, event.TypedDeleteEvent[client.Object], workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	// No-op
 }
 
-func (nh *nodeHandler) Generic(context.Context, event.GenericEvent, workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Generic(context.Context, event.TypedGenericEvent[client.Object], workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	// No-op
 }

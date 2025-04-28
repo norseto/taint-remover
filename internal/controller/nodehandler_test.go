@@ -34,7 +34,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client" // Add client import
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile" // Add reconcile import
 )
 
 var _ = Describe("NodeHandler", func() {
@@ -43,7 +45,7 @@ var _ = Describe("NodeHandler", func() {
 		reconciler *TaintRemoverReconciler
 		handler    *nodeHandler
 		node       *corev1.Node
-		queue      workqueue.RateLimitingInterface
+		queue      workqueue.TypedRateLimitingInterface[reconcile.Request] // Change queue type
 	)
 
 	BeforeEach(func() {
@@ -72,7 +74,7 @@ var _ = Describe("NodeHandler", func() {
 		Expect(k8sClient.Create(ctx, node)).To(Succeed())
 
 		// Create a mock queue
-		queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+		queue = workqueue.NewTypedRateLimitingQueue[reconcile.Request](workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]()) // Use DefaultTypedControllerRateLimiter
 	})
 
 	AfterEach(func() {
@@ -83,7 +85,7 @@ var _ = Describe("NodeHandler", func() {
 	Describe("Create", func() {
 		It("should call applyRemoveTaintOnNode", func() {
 			// Call the Create method
-			handler.Create(ctx, event.CreateEvent{Object: node}, queue)
+			handler.Create(ctx, event.TypedCreateEvent[client.Object]{Object: node}, queue) // Use TypedCreateEvent
 
 			// Verification is implicit - if there's no panic, the test passes
 			// The actual functionality is tested in the applyRemoveTaintOnNode tests
@@ -93,7 +95,7 @@ var _ = Describe("NodeHandler", func() {
 	Describe("Update", func() {
 		It("should call applyRemoveTaintOnNode", func() {
 			// Call the Update method
-			handler.Update(ctx, event.UpdateEvent{ObjectOld: node, ObjectNew: node}, queue)
+			handler.Update(ctx, event.TypedUpdateEvent[client.Object]{ObjectOld: node, ObjectNew: node}, queue) // Use TypedUpdateEvent
 
 			// Verification is implicit - if there's no panic, the test passes
 			// The actual functionality is tested in the applyRemoveTaintOnNode tests
@@ -103,7 +105,7 @@ var _ = Describe("NodeHandler", func() {
 	Describe("Delete", func() {
 		It("should do nothing", func() {
 			// Call the Delete method
-			handler.Delete(ctx, event.DeleteEvent{Object: node}, queue)
+			handler.Delete(ctx, event.TypedDeleteEvent[client.Object]{Object: node}, queue) // Use TypedDeleteEvent
 
 			// No-op function, so just verify it doesn't panic
 		})
@@ -112,7 +114,7 @@ var _ = Describe("NodeHandler", func() {
 	Describe("Generic", func() {
 		It("should do nothing", func() {
 			// Call the Generic method
-			handler.Generic(ctx, event.GenericEvent{Object: node}, queue)
+			handler.Generic(ctx, event.TypedGenericEvent[client.Object]{Object: node}, queue) // Use TypedGenericEvent
 
 			// No-op function, so just verify it doesn't panic
 		})
