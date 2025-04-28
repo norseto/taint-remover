@@ -304,18 +304,18 @@ type nodeHandler struct {
 	r *TaintRemoverReconciler
 }
 
-func (nh *nodeHandler) Create(ctx context.Context, evt event.CreateEvent, _ workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Create(ctx context.Context, evt event.TypedCreateEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	_ = applyRemoveTaintOnNode(ctx, nh.r.Client, evt.Object)
 }
 
-func (nh *nodeHandler) Update(ctx context.Context, evt event.UpdateEvent, _ workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Update(ctx context.Context, evt event.TypedUpdateEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	_ = applyRemoveTaintOnNode(ctx, nh.r.Client, evt.ObjectNew)
 }
 
-func (nh *nodeHandler) Delete(context.Context, event.DeleteEvent, workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Delete(ctx context.Context, evt event.TypedDeleteEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	// No-op
 }
 
-func (nh *nodeHandler) Generic(context.Context, event.GenericEvent, workqueue.RateLimitingInterface) {
+func (nh *nodeHandler) Generic(ctx context.Context, evt event.TypedGenericEvent[client.Object], _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	// No-op
 }
