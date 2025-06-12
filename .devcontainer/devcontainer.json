@@ -12,7 +12,7 @@
       "helm": "latest",
       "minikube": "none"
     },
-    "ghcr.io/devcontainers-contrib/features/kops:1": {
+    "ghcr.io/devcontainers-extra/features/kops:1": {
       "version": "latest"
     },
 //    "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
