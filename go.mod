@@ -1,6 +1,8 @@
 module github.com/norseto/taint-remover
 
-go 1.24.2
+go 1.24.0
+
+toolchain go1.24.4
 
 require (
 	github.com/onsi/ginkgo/v2 v2.22.0
