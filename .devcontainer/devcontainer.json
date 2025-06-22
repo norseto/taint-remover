@@ -12,22 +12,13 @@
       "helm": "latest",
       "minikube": "none"
     },
-    "ghcr.io/devcontainers-extra/features/kops:1": {
-      "version": "latest"
-    },
-//    "ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/mpriscella/features/sops:1": {},
     "ghcr.io/mpriscella/features/kind:1": {},
-    "ghcr.io/balazs23/devcontainers-features/bazel:1": {},
-    "ghcr.io/rio/features/skaffold:2": {},
     "ghcr.io/rio/features/kustomize:1": {},
-//    "ghcr.io/audacioustux/devcontainers/operator-sdk:1": {},
     "ghcr.io/audacioustux/devcontainers/kubebuilder:1": {},
-
-//    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -51,16 +42,16 @@
     }
   },
 
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root",
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "mounts": [
-    "type=volume,source=aws-cred,target=/root/.aws,consistency=delegated",
-    "type=volume,source=oci-k8s-cred,target=/root/.kube,consistency=delegated",
+    "type=volume,source=aws-cred,target=/home/vscode/.aws,consistency=delegated",
+    "type=volume,source=oci-k8s-cred,target=/home/vscode/.kube,consistency=delegated",
 
     "type=volume,source=go-sdk-1-24,target=/usr/local/go,consistency=delegated",
     "type=volume,source=go-path,target=/go,consistency=delegated",
     "type=volume,source=go-cache,target=/tmp/gocache,consistency=delegated",
-    "type=volume,source=jetbrains-taint-remover,target=/root/.cache/JetBrains,consistency=delegated"
+    "type=volume,source=jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains,consistency=delegated"
   ]
 }
