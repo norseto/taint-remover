@@ -168,6 +168,9 @@ func DeleteTaint(taints []v1.Taint, taintToDelete *v1.Taint) ([]v1.Taint, bool) 
 // false otherwise.
 func RemoveTaint(node *v1.Node, taint *v1.Taint) (*v1.Node, bool, error) {
 	newNode := node.DeepCopy()
+	if taint == nil {
+		return newNode, false, nil
+	}
 	nodeTaints := newNode.Spec.Taints
 	if len(nodeTaints) == 0 {
 		return newNode, false, nil

@@ -222,6 +222,23 @@ func TestRemoveTaintAdditional(t *testing.T) {
 		}
 	})
 
-	// Removed the nil taint test case as it causes a panic
-	// The RemoveTaint function doesn't check for nil taints
+	t.Run("test with nil taint", func(t *testing.T) {
+		node := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{Name: "node-nil-taint"},
+			Spec: v1.NodeSpec{
+				Taints: []v1.Taint{{Key: "foo", Value: "bar", Effect: "NoExecute"}},
+			},
+		}
+
+		newNode, updated, err := RemoveTaint(node, nil)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if updated {
+			t.Fatal("Expected the node not to be updated, but it was")
+		}
+		if !reflect.DeepEqual(newNode, node) {
+			t.Fatalf("Expected the node to be unchanged, but got: %v", newNode)
+		}
+	})
 }
