@@ -11,9 +11,3 @@ for dir in $DIRS; do
     sudo chown -R vscode:vscode "$dir"
   fi
 done
-
-ln -s $HOME/.bun/bin/bun $HOME/.bun/bin/node
-ln -s $HOME/.bun/bin/bun $HOME/.bun/bin/npm
-ln -s $HOME/.bun/bin/bunx $HOME/.bun/bin/npx
-
-bun install -g @openai/codex
