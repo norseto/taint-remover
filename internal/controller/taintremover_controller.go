@@ -262,7 +262,7 @@ func patchNodesToRemoveTaints(ctx context.Context, c client.Client, nodes []*cor
 
 // makePatches calculates the patches required to remove the specified taints from each node.
 func makePatches(nodes []*corev1.Node, taints []*corev1.Taint) []nodeTaintsPatchSpec {
-	var result []nodeTaintsPatchSpec
+	result := make([]nodeTaintsPatchSpec, 0, len(nodes))
 
 	for _, n := range nodes {
 		newTaints, needPatch := makeNewTaintsForNode(n, taints)

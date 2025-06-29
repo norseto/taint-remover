@@ -35,6 +35,12 @@ make run
 # Format and vet code
 make fmt
 make vet
+
+# Run linting with golangci-lint
+make lint
+
+# Run linting with auto-fix
+make lint-fix
 ```
 
 ### Code Generation
@@ -72,6 +78,18 @@ make build-installer
 # Remove from cluster
 make undeploy
 make uninstall
+```
+
+### Security and Code Quality
+```bash
+# Run vulnerability check
+make vulcheck
+
+# Run security analysis
+make seccheck
+
+# Run all quality checks
+make fmt vet lint test vulcheck seccheck
 ```
 
 ### Running Single Tests

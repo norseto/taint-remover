@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/debian
 {
   "name": "taint-remover",
-  "image": "mcr.microsoft.com/devcontainers/base:bullseye",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
   "features": {
     "ghcr.io/devcontainers/features/go:1": {
       "version": "1.24"
@@ -30,7 +30,7 @@
   "remoteEnv": {
     "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
-    "GOCACHE": "/tmp/gocache"
+    "GOCACHE": "/home/vscode/.gocache"
   },
   "customizations": {
     "vscode": {
@@ -48,12 +48,11 @@
   "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "mounts": [
-    "type=volume,source=aws-cred,target=/home/vscode/.aws,consistency=delegated",
-    "type=volume,source=oci-k8s-cred,target=/home/vscode/.kube,consistency=delegated",
-
-    "type=volume,source=go-sdk-1-24,target=/usr/local/go,consistency=delegated",
-    "type=volume,source=go-path,target=/go,consistency=delegated",
-    "type=volume,source=go-cache,target=/tmp/gocache,consistency=delegated",
-    "type=volume,source=jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains,consistency=delegated"
+    "type=volume,consistency=delegated,source=vscode-aws-cred,target=/home/vscode/.aws",
+    "type=volume,consistency=delegated,source=vscode-oci-k8s-cred,target=/home/vscode/.kube",
+    "type=volume,consistency=delegated,source=vscode-go-sdk-1-24,target=/usr/local/go",
+    "type=volume,consistency=delegated,source=vscode-go-path,target=/go",
+    "type=volume,consistency=delegated,source=vscode-go-cache,target=/home/vscode/.gocache",
+    "type=volume,consistency=delegated,source=vscode-jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains"
   ]
 }

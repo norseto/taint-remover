@@ -1,3 +1,28 @@
 # More info: https://docs.docker.com/engine/reference/builder/#dockerignore-file
 # Ignore build and test binaries.
 bin/
+
+# Test coverage files
+cover.out
+
+# Version control
+.git/
+
+# Documentation (not needed in runtime)
+README.md
+AGENTS.md
+CLAUDE.md
+docs/
+
+# Test files
+*_test.go
+
+# Development tools and scripts
+hack/
+Makefile
+
+# Backup files
+*.bak
+
+# Distribution directory
+dist/
