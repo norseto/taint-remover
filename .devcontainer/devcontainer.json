@@ -18,10 +18,6 @@
     "ghcr.io/audacioustux/devcontainers/kubebuilder:1": {},
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/jungaretti/features/ripgrep:1": {},
-    "ghcr.io/norseto/features/codex-cli:0.3.4": { "install-bun": true },
-    "ghcr.io/norseto/features/gemini-cli:0.2.2": { "install-bun": true },
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
