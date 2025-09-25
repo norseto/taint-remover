@@ -8,3 +8,5 @@ sudo chown -R vscode:vscode \
   /home/vscode/.aws /home/vscode/.kube \
   /usr/local/go /go /home/vscode/.gocache \
   /home/vscode/.cache
+
+sudo chown -R $(id -u):$(id -g) $HOME/.codex
