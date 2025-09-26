@@ -32,11 +32,11 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "git.enabled": false
+        "ninetyfive.indexingEnabled": "on",
+        "go.gopath": "/go",
+        "go.goroot": "/usr/local/go"
       },
       "extensions": [
-        "editorconfig.editorconfig",
-        "googlecloudtools.cloudcode"
       ]
     }
   },
@@ -47,7 +47,6 @@
   "mounts": [
     "type=volume,consistency=delegated,source=vscode-aws-cred,target=/home/vscode/.aws",
     "type=volume,consistency=delegated,source=vscode-oci-k8s-cred,target=/home/vscode/.kube",
-    "type=volume,consistency=delegated,source=vscode-go-sdk-1-24,target=/usr/local/go",
     "type=volume,consistency=delegated,source=vscode-go-path,target=/go",
     "type=volume,consistency=delegated,source=vscode-go-cache,target=/home/vscode/.gocache",
     "type=volume,consistency=delegated,source=vscode-jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains",
