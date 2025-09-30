@@ -25,17 +25,22 @@ SOFTWARE.
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
+	"io"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -54,11 +59,170 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+type cliConfig struct {
+	metricsAddr          string
+	probeAddr            string
+	secureMetrics        bool
+	enableLeaderElection bool
+	enableHTTP2          bool
+	zapOptions           zap.Options
+}
+
+type managerFacade interface {
+	AddHealthzCheck(name string, check healthz.Checker) error
+	AddReadyzCheck(name string, check healthz.Checker) error
+	Start(ctx context.Context) error
+}
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(nodesv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+func disableHTTP2(logger logr.Logger) func(*tls.Config) {
+	return func(c *tls.Config) {
+		logger.Info("disabling http/2")
+		c.NextProtos = []string{"http/1.1"}
+	}
+}
+
+func parseFlags(args []string) (cliConfig, error) {
+	fs := flag.NewFlagSet("taint-remover", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	cfg := cliConfig{
+		metricsAddr: ":8080",
+		probeAddr:   ":8081",
+		zapOptions: zap.Options{
+			Development: false,
+		},
+	}
+
+	fs.BoolVar(&cfg.secureMetrics, "metrics-secure", false, "If set the metrics endpoint is served securely")
+	fs.BoolVar(&cfg.enableHTTP2, "enable-http2", false, "If HTTP/2 should be enabled for the metrics and webhook servers.")
+	fs.StringVar(&cfg.metricsAddr, "metrics-bind-address", cfg.metricsAddr, "The address the metric endpoint binds to.")
+	fs.StringVar(&cfg.probeAddr, "health-probe-bind-address", cfg.probeAddr, "The address the probe endpoint binds to.")
+	fs.BoolVar(&cfg.enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	cfg.zapOptions.BindFlags(fs)
+
+	if err := fs.Parse(args); err != nil {
+		return cfg, err
+	}
+
+	return cfg, nil
+}
+
+func run(args []string) int {
+	cfg, err := parseFlags(args)
+	if err != nil {
+		if !errors.Is(err, flag.ErrHelp) {
+			setupLog.Error(err, "failed to parse flags")
+		}
+		return 2
+	}
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&cfg.zapOptions)))
+
+	ctrl.Log.Info("Starting TaintRemover", "version", taintremover.RELEASE_VERSION,
+		"GitVersion", taintremover.GitVersion)
+
+	var tlsOpts []func(*tls.Config)
+	if !cfg.enableHTTP2 {
+		tlsOpts = append(tlsOpts, disableHTTP2(setupLog))
+	}
+
+	webhookServer := webhook.NewServer(webhook.Options{
+		TLSOpts: tlsOpts,
+	})
+
+	metricsServerOptions := buildMetricsOptions(cfg.secureMetrics, tlsOpts, cfg.metricsAddr)
+
+	restCfg, err := getConfigFn()
+	if err != nil {
+		setupLog.Error(err, "unable to get Kubernetes configuration")
+		return 1
+	}
+
+	managerOpts := ctrl.Options{
+		Scheme:                 scheme,
+		Metrics:                metricsServerOptions,
+		HealthProbeBindAddress: cfg.probeAddr,
+		WebhookServer:          webhookServer,
+		LeaderElection:         cfg.enableLeaderElection,
+		LeaderElectionID:       "cab18bf0.peppy-ratio.dev",
+	}
+
+	facade, _, err := managerFactory(restCfg, managerOpts)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		return 1
+	}
+
+	if facade == nil {
+		setupLog.Error(errors.New("manager facade is nil"), "unable to start manager")
+		return 1
+	}
+
+	if controllerSetupFn != nil {
+		if err := controllerSetupFn(facade); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TaintRemover")
+			return 1
+		}
+	}
+
+	if err := facade.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		return 1
+	}
+	if err := facade.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		return 1
+	}
+
+	setupLog.Info("starting manager")
+	handler := signalHandlerFn
+	if handler == nil {
+		handler = ctrl.SetupSignalHandler
+	}
+	ctx := handler()
+	if err := facade.Start(ctx); err != nil {
+		setupLog.Error(err, "problem running manager")
+		return 1
+	}
+
+	return 0
+}
+
+var (
+	getConfigFn       = ctrl.GetConfig
+	managerFactory    = defaultManagerFactory
+	controllerSetupFn = defaultControllerSetup
+	signalHandlerFn   = ctrl.SetupSignalHandler
+)
+
+func defaultManagerFactory(cfg *rest.Config, opts ctrl.Options) (managerFacade, ctrl.Manager, error) {
+	mgr, err := ctrl.NewManager(cfg, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mgr, mgr, nil
+}
+
+func defaultControllerSetup(f managerFacade) error {
+	mgr, ok := any(f).(ctrl.Manager)
+	if !ok {
+		return errors.New("controller manager unavailable")
+	}
+	if mgr == nil {
+		return errors.New("controller manager is nil")
+	}
+	return (&controller.TaintRemoverReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
 }
 
 func buildMetricsOptions(secure bool, tlsOpts []func(*tls.Config), bind string) metricsserver.Options {
@@ -81,101 +245,7 @@ func buildMetricsOptions(secure bool, tlsOpts []func(*tls.Config), bind string) 
 }
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	var secureMetrics bool
-	var enableHTTP2 bool
-	var tlsOpts []func(*tls.Config)
-
-	flag.BoolVar(&secureMetrics, "metrics-secure", false, "If set the metrics endpoint is served securely")
-	flag.BoolVar(&enableHTTP2, "enable-http2", false, "If HTTP/2 should be enabled for the metrics and webhook servers.")
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	opts := zap.Options{
-		Development: false,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	ctrl.Log.Info("Starting TaintRemover", "version", taintremover.RELEASE_VERSION,
-		"GitVersion", taintremover.GitVersion)
-
-	// if the enable-http2 flag is false (the default), http/2 should be disabled
-	// due to its vulnerabilities. More specifically, disabling http/2 will
-	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
-	// Rapid Reset CVEs. For more information see:
-	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
-	// - https://github.com/advisories/GHSA-4374-p667-p6c8
-	disableHTTP2 := func(c *tls.Config) {
-		setupLog.Info("disabling http/2")
-		c.NextProtos = []string{"http/1.1"}
-	}
-
-	if !enableHTTP2 {
-		tlsOpts = append(tlsOpts, disableHTTP2)
-	}
-
-	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts: tlsOpts,
-	})
-
-	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
-	// More info:
-	// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/metrics/server
-	// - https://book.kubebuilder.io/reference/metrics.html
-	metricsServerOptions := buildMetricsOptions(secureMetrics, tlsOpts, metricsAddr)
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsServerOptions,
-		HealthProbeBindAddress: probeAddr,
-		WebhookServer:          webhookServer,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "cab18bf0.peppy-ratio.dev",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	if err = (&controller.TaintRemoverReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TaintRemover")
-		os.Exit(1)
-	}
-	//+kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+	if exitCode := run(os.Args[1:]); exitCode != 0 {
+		os.Exit(exitCode)
 	}
 }
