@@ -61,6 +61,25 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+func buildMetricsOptions(secure bool, tlsOpts []func(*tls.Config), bind string) metricsserver.Options {
+	options := metricsserver.Options{
+		BindAddress:   bind,
+		SecureServing: secure,
+		TLSOpts:       tlsOpts,
+	}
+
+	if secure {
+		// FilterProvider is used to protect the metrics endpoint with authn/authz.
+		options.FilterProvider = filters.WithAuthenticationAndAuthorization
+
+		// TODO(user): If CertDir, CertName, and KeyName are not specified, controller-runtime will automatically
+		// generate self-signed certificates for the metrics server. While convenient for development and testing,
+		// this setup is not recommended for production.
+	}
+
+	return options
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -110,23 +129,7 @@ func main() {
 	// More info:
 	// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/metrics/server
 	// - https://book.kubebuilder.io/reference/metrics.html
-	metricsServerOptions := metricsserver.Options{
-		BindAddress:   metricsAddr,
-		SecureServing: secureMetrics,
-		TLSOpts:       tlsOpts,
-	}
-
-	if secureMetrics {
-		// FilterProvider is used to protect the metrics endpoint with authn/authz.
-		// These configurations ensure that only authorized users and service accounts
-		// can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
-		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
-		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
-
-		// TODO(user): If CertDir, CertName, and KeyName are not specified, controller-runtime will automatically
-		// generate self-signed certificates for the metrics server. While convenient for development and testing,
-		// this setup is not recommended for production.
-	}
+	metricsServerOptions := buildMetricsOptions(secureMetrics, tlsOpts, metricsAddr)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
