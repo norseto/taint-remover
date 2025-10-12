@@ -27,7 +27,7 @@ package taintremover
 var Version = RELEASE_VERSION
 
 const (
-	RELEASE_VERSION = "0.4.3"
+	RELEASE_VERSION = "0.4.4"
 )
 
 var GitVersion = ""
