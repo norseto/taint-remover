@@ -31,6 +31,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"reflect"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -196,15 +197,27 @@ func run(args []string) int {
 	return 0
 }
 
+type reconcilerWithSetup interface {
+	SetupWithManager(ctrl.Manager) error
+}
+
 var (
-	getConfigFn       = ctrl.GetConfig
-	managerFactory    = defaultManagerFactory
-	controllerSetupFn = defaultControllerSetup
-	signalHandlerFn   = ctrl.SetupSignalHandler
+	getConfigFn               = ctrl.GetConfig
+	managerFactory            = defaultManagerFactory
+	controllerSetupFn         = defaultControllerSetup
+	signalHandlerFn           = ctrl.SetupSignalHandler
+	newManagerFn              = ctrl.NewManager
+	newTaintRemoverReconciler = func(mgr ctrl.Manager) reconcilerWithSetup {
+		return &controller.TaintRemoverReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}
+	}
+	exitFunc = os.Exit
 )
 
 func defaultManagerFactory(cfg *rest.Config, opts ctrl.Options) (managerFacade, ctrl.Manager, error) {
-	mgr, err := ctrl.NewManager(cfg, opts)
+	mgr, err := newManagerFn(cfg, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,10 +232,11 @@ func defaultControllerSetup(f managerFacade) error {
 	if mgr == nil {
 		return errors.New("controller manager is nil")
 	}
-	return (&controller.TaintRemoverReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr)
+	value := reflect.ValueOf(mgr)
+	if value.Kind() == reflect.Pointer && value.IsNil() {
+		return errors.New("controller manager is nil")
+	}
+	return newTaintRemoverReconciler(mgr).SetupWithManager(mgr)
 }
 
 func buildMetricsOptions(secure bool, tlsOpts []func(*tls.Config), bind string) metricsserver.Options {
@@ -246,6 +260,6 @@ func buildMetricsOptions(secure bool, tlsOpts []func(*tls.Config), bind string) 
 
 func main() {
 	if exitCode := run(os.Args[1:]); exitCode != 0 {
-		os.Exit(exitCode)
+		exitFunc(exitCode)
 	}
 }

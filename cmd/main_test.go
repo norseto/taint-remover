@@ -4,14 +4,25 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net/http"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 type stubManager struct {
@@ -34,6 +45,92 @@ func (s *stubManager) Start(ctx context.Context) error {
 	s.started = true
 	s.startCtx = ctx
 	return s.startErr
+}
+
+type stubCtrlManager struct {
+	*stubManager
+	scheme  *runtime.Scheme
+	cfg     *rest.Config
+	elected chan struct{}
+}
+
+func newStubCtrlManager() *stubCtrlManager {
+	return &stubCtrlManager{
+		stubManager: &stubManager{},
+		scheme:      runtime.NewScheme(),
+		cfg:         &rest.Config{},
+		elected:     make(chan struct{}),
+	}
+}
+
+func (s *stubCtrlManager) Add(manager.Runnable) error {
+	return nil
+}
+
+func (s *stubCtrlManager) Elected() <-chan struct{} {
+	return s.elected
+}
+
+func (s *stubCtrlManager) AddMetricsServerExtraHandler(string, http.Handler) error {
+	return nil
+}
+
+func (s *stubCtrlManager) GetWebhookServer() webhook.Server {
+	return webhook.NewServer(webhook.Options{})
+}
+
+func (s *stubCtrlManager) GetLogger() logr.Logger {
+	return logr.Logger{}
+}
+
+func (s *stubCtrlManager) GetControllerOptions() config.Controller {
+	return config.Controller{}
+}
+
+func (s *stubCtrlManager) GetHTTPClient() *http.Client {
+	return &http.Client{}
+}
+
+func (s *stubCtrlManager) GetConfig() *rest.Config {
+	return s.cfg
+}
+
+func (s *stubCtrlManager) GetCache() cache.Cache {
+	return nil
+}
+
+func (s *stubCtrlManager) GetScheme() *runtime.Scheme {
+	return s.scheme
+}
+
+func (s *stubCtrlManager) GetClient() client.Client {
+	return nil
+}
+
+func (s *stubCtrlManager) GetFieldIndexer() client.FieldIndexer {
+	return nil
+}
+
+func (s *stubCtrlManager) GetEventRecorderFor(string) record.EventRecorder {
+	return nil
+}
+
+func (s *stubCtrlManager) GetRESTMapper() meta.RESTMapper {
+	return nil
+}
+
+func (s *stubCtrlManager) GetAPIReader() client.Reader {
+	return nil
+}
+
+type recordingReconciler struct {
+	called bool
+	err    error
+}
+
+func (r *recordingReconciler) SetupWithManager(ctrl.Manager) error {
+	r.called = true
+	return r.err
 }
 
 func TestDisableHTTP2(t *testing.T) {
@@ -392,5 +489,174 @@ func TestRunDisablesHTTP2ByDefault(t *testing.T) {
 	}
 	if len(captured.Metrics.TLSOpts) != 1 {
 		t.Fatalf("expected one TLS opt to disable HTTP/2, got %d", len(captured.Metrics.TLSOpts))
+	}
+}
+
+func TestParseFlagsInvalidValue(t *testing.T) {
+	if _, err := parseFlags([]string{"--metrics-secure=notabool"}); err == nil {
+		t.Fatalf("expected error for invalid boolean flag")
+	}
+}
+
+func TestRunParseFlagsError(t *testing.T) {
+	if code := run([]string{"--unknown"}); code != 2 {
+		t.Fatalf("expected exit code 2 for flag parse error, got %d", code)
+	}
+}
+
+func TestRunGetConfigError(t *testing.T) {
+	origGetConfig := getConfigFn
+	getConfigFn = func() (*rest.Config, error) { return nil, errors.New("cfg err") }
+	t.Cleanup(func() { getConfigFn = origGetConfig })
+
+	if code := run(nil); code != 1 {
+		t.Fatalf("expected exit code 1 when config retrieval fails, got %d", code)
+	}
+}
+
+func TestDefaultManagerFactory(t *testing.T) {
+	origNewManager := newManagerFn
+	defer func() { newManagerFn = origNewManager }()
+
+	fake := newStubCtrlManager()
+	newManagerFn = func(*rest.Config, ctrl.Options) (ctrl.Manager, error) {
+		return fake, nil
+	}
+
+	facade, mgr, err := defaultManagerFactory(&rest.Config{}, ctrl.Options{})
+	if err != nil {
+		t.Fatalf("defaultManagerFactory returned error: %v", err)
+	}
+	if facade != fake || mgr != fake {
+		t.Fatalf("expected returned manager to be fake instance")
+	}
+}
+
+func TestDefaultManagerFactoryError(t *testing.T) {
+	origNewManager := newManagerFn
+	defer func() { newManagerFn = origNewManager }()
+
+	newManagerFn = func(*rest.Config, ctrl.Options) (ctrl.Manager, error) {
+		return nil, errors.New("boom")
+	}
+
+	if _, _, err := defaultManagerFactory(&rest.Config{}, ctrl.Options{}); err == nil {
+		t.Fatalf("expected error when manager creation fails")
+	}
+}
+
+func TestDefaultControllerSetupManagerUnavailable(t *testing.T) {
+	if err := defaultControllerSetup(&stubManager{}); err == nil {
+		t.Fatalf("expected error when facade does not implement ctrl.Manager")
+	}
+}
+
+func TestDefaultControllerSetupSuccess(t *testing.T) {
+	origNewReconciler := newTaintRemoverReconciler
+	defer func() { newTaintRemoverReconciler = origNewReconciler }()
+
+	fakeMgr := newStubCtrlManager()
+	rec := &recordingReconciler{}
+
+	newTaintRemoverReconciler = func(ctrl.Manager) reconcilerWithSetup {
+		return rec
+	}
+
+	if err := defaultControllerSetup(fakeMgr); err != nil {
+		t.Fatalf("expected success from defaultControllerSetup, got error: %v", err)
+	}
+	if !rec.called {
+		t.Fatalf("expected reconciler SetupWithManager to be invoked")
+	}
+}
+
+func TestDefaultControllerSetupNilManager(t *testing.T) {
+	var nilFacade managerFacade = (*stubCtrlManager)(nil)
+	if err := defaultControllerSetup(nilFacade); err == nil {
+		t.Fatalf("expected error when manager is nil")
+	}
+}
+
+func TestMainSuccess(t *testing.T) {
+	origGetConfig := getConfigFn
+	origManagerFactory := managerFactory
+	origControllerSetup := controllerSetupFn
+	origSignalHandler := signalHandlerFn
+	origNewManager := newManagerFn
+	origNewReconciler := newTaintRemoverReconciler
+	origArgs := os.Args
+	origExit := exitFunc
+
+	defer func() {
+		getConfigFn = origGetConfig
+		managerFactory = origManagerFactory
+		controllerSetupFn = origControllerSetup
+		signalHandlerFn = origSignalHandler
+		newManagerFn = origNewManager
+		newTaintRemoverReconciler = origNewReconciler
+		os.Args = origArgs
+		exitFunc = origExit
+	}()
+
+	fakeMgr := newStubCtrlManager()
+	controllerCalled := false
+	getConfigFn = func() (*rest.Config, error) { return &rest.Config{}, nil }
+	managerFactory = func(*rest.Config, ctrl.Options) (managerFacade, ctrl.Manager, error) {
+		return fakeMgr, fakeMgr, nil
+	}
+	controllerSetupFn = func(m managerFacade) error {
+		if m != fakeMgr {
+			t.Fatalf("expected manager facade to be fakeMgr")
+		}
+		controllerCalled = true
+		return defaultControllerSetup(m)
+	}
+	signalHandlerFn = func() context.Context { return context.Background() }
+	newManagerFn = func(*rest.Config, ctrl.Options) (ctrl.Manager, error) {
+		return fakeMgr, nil
+	}
+	rec := &recordingReconciler{}
+	newTaintRemoverReconciler = func(ctrl.Manager) reconcilerWithSetup {
+		return rec
+	}
+
+	os.Args = []string{"taint-remover"}
+	main()
+
+	if !controllerCalled {
+		t.Fatalf("expected controllerSetupFn to be invoked")
+	}
+	if !rec.called {
+		t.Fatalf("expected reconciler to be constructed and invoked")
+	}
+}
+
+func TestMainExitOnError(t *testing.T) {
+	origGetConfig := getConfigFn
+	origExit := exitFunc
+	origArgs := os.Args
+
+	defer func() {
+		getConfigFn = origGetConfig
+		exitFunc = origExit
+		os.Args = origArgs
+	}()
+
+	getConfigFn = func() (*rest.Config, error) { return nil, errors.New("cfg err") }
+	called := 0
+	exitCode := 0
+	exitFunc = func(code int) {
+		called++
+		exitCode = code
+	}
+	os.Args = []string{"taint-remover"}
+
+	main()
+
+	if called != 1 {
+		t.Fatalf("expected exitFunc to be called once, got %d", called)
+	}
+	if exitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", exitCode)
 	}
 }
