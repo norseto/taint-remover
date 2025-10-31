@@ -9,4 +9,4 @@ sudo chown -R vscode:vscode \
   /usr/local/go /go /home/vscode/.gocache \
   /home/vscode/.cache
 
-sudo chown -R $(id -u):$(id -g) $HOME/.codex
+sudo chown -R $(id -u):$(id -g) $HOME/.codex $HOME/.claude
