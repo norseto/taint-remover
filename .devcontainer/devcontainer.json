@@ -3,6 +3,9 @@
 {
   "name": "taint-remover",
   "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway"
+  ],
   "features": {
     "ghcr.io/devcontainers/features/go:1": {
       "version": "1.24"
