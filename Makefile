@@ -64,11 +64,11 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: lint
-lint: $(GOLANGCI_LINT) ## Run golangci-lint against code.
+lint: golangci-lint ## Run golangci-lint against code.
 	GOLANGCI_LINT_CACHE=/tmp/golangci-lint-cache $(GOLANGCI_LINT) run
 
 .PHONY: lint-fix
-lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint with auto-fix against code.
+lint-fix: golangci-lint ## Run golangci-lint with auto-fix against code.
 	GOLANGCI_LINT_CACHE=/tmp/golangci-lint-cache $(GOLANGCI_LINT) run --fix
 
 .PHONY: test
