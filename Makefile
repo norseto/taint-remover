@@ -75,6 +75,10 @@ lint-fix: golangci-lint ## Run golangci-lint with auto-fix against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: cover
+cover: test ## Show test coverage summary.
+	go tool cover -func=cover.out
+
 ##@ Security
 
 .PHONY: vulcheck
