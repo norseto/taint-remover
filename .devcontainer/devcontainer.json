@@ -5,7 +5,7 @@
   "image": "mcr.microsoft.com/devcontainers/base:bullseye",
   "features": {
     "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.25"
+      "version": "1.25.7"
     },
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "version": "latest",
@@ -16,8 +16,8 @@
     "ghcr.io/mpriscella/features/kind:1": {},
     "ghcr.io/rio/features/kustomize:1": {},
     "ghcr.io/audacioustux/devcontainers/kubebuilder:1": {},
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-    // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { "moby": false },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": { "moby": false },
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
