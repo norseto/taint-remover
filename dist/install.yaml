@@ -421,7 +421,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: norseto/taint-remover:v0.5.0-alpha.2
+        image: norseto/taint-remover:v0.5.0-alpha.3
         livenessProbe:
           httpGet:
             path: /healthz
