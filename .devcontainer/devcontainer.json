@@ -4,7 +4,18 @@
   "name": "taint-remover",
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "runArgs": [
-    "--add-host=host.docker.internal:host-gateway"
+    "--add-host=host.docker.internal:host-gateway",
+    "--security-opt=seccomp=unconfined",
+    "--cap-drop=ALL",
+    "--cap-add=CHOWN",
+    "--cap-add=FOWNER",
+    "--cap-add=DAC_OVERRIDE",
+    "--cap-add=AUDIT_WRITE",
+    "--cap-add=SYS_ADMIN",
+    "--cap-add=SETUID",
+    "--cap-add=SETGID",
+    "--pids-limit=512",
+    "--init"
   ],
   "features": {
     "ghcr.io/devcontainers/features/go:1": {
