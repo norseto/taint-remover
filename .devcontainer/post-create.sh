@@ -7,6 +7,10 @@ sudo apt-get update && sudo apt-get install -y --no-install-recommends xdg-utils
 sudo chown -R $(id -u):$(id -g)  \
   /home/vscode/.aws /home/vscode/.kube \
   /usr/local/go \
+  ${HOME}/.codex \
+  ${HOME}/.cursor \
+  ${HOME}/.copilot \
+  ${HOME}/.claude \
   /home/vscode/.cache \
   /tmp/.gocache /tmp/.gomodcache /go
 

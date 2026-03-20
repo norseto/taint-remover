@@ -44,6 +44,7 @@
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
   },
   "containerEnv": {
+    "CURSOR_API_KEY": "${localEnv:CURSOR_API_KEY}",
     "CONTEXT7_API_KEY": "${localEnv:CONTEXT7_API_KEY}",
     "GOCACHE": "/tmp/.gocache",
     "GOMODCACHE": "/tmp/.gomodcache",
@@ -72,7 +73,9 @@
     "type=volume,consistency=delegated,source=vscode-go-modcache,target=/tmp/.gomodcache",
     "type=volume,consistency=delegated,source=vscode-go-path-pkg,target=/go/pkg",
     "type=volume,consistency=delegated,source=vscode-jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains",
-    "type=volume,source=codex_volume,target=/home/vscode/.codex,consistency=cached",
-    "type=volume,source=claude-code,target=/home/vscode/.claude,consistency=cached"
+    "type=volume,source=codex-volume,target=/home/vscode/.codex,consistency=cached",
+    "type=volume,source=claude-code,target=/home/vscode/.claude,consistency=cached",
+    "type=volume,source=cursor-volume,target=/home/vscode/.cursor,consistency=cached",
+    "type=volume,source=copilot-volume,target=/home/vscode/.copilot,consistency=cached"
   ]
 }
