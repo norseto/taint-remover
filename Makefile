@@ -179,9 +179,9 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
 CONTROLLER_TOOLS_VERSION ?= v0.17.1
-GOVULNCHECK_VERSION ?= v1.1.4
+GOVULNCHECK_VERSION ?= v1.3.0
 GOSEC_VERSION ?= v2.22.5
-GOLANGCI_LINT_VERSION ?= v1.63.2
+GOLANGCI_LINT_VERSION ?= v1.64.8
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
