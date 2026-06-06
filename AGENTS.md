@@ -13,6 +13,9 @@
 - Make comments on lines by themselves.
 - Format code with `go fmt ./...` or `make fmt`
 
+## Planning
+- When creating or moving plans, follow the lifecycle directory rules in [docs/plans/README.md](docs/plans/README.md).
+
 ## Git Usage
 - Use only English for branch name
 - Use only English for commit messages
