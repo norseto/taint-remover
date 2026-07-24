@@ -84,6 +84,9 @@
     "type=volume,consistency=delegated,source=vscode-jetbrains-taint-remover,target=/home/vscode/.cache/JetBrains",
     "type=volume,source=codex-volume,target=/home/vscode/.codex,consistency=cached",
     "type=volume,source=claude-code,target=/home/vscode/.claude,consistency=cached",
-    "type=volume,source=cursor-volume,target=/home/vscode/.cursor,consistency=cached"
+    "type=volume,source=cursor-volume,target=/home/vscode/.cursor,consistency=cached",
+    // Per-container ephemeral app-server runtime state
+    "type=tmpfs,target=/home/vscode/.codex/app-server-control,tmpfs-mode=0700",
+    "type=tmpfs,target=/home/vscode/.codex/app-server-daemon,tmpfs-mode=0700"
   ]
 }
