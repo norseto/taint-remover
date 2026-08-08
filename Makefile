@@ -82,11 +82,11 @@ cover: test ## Show test coverage summary.
 ##@ Security
 
 .PHONY: vulcheck
-vulcheck: $(GOVULNCHECK) ## Run vulnerability check using govulncheck.
+vulcheck: govulncheck ## Run vulnerability check using govulncheck.
 	$(GOVULNCHECK) ./...
 
 .PHONY: seccheck
-seccheck: $(GOSEC) ## Run security analysis using gosec.
+seccheck: gosec ## Run security analysis using gosec.
 	$(GOSEC) -exclude-dir='.*test.*' ./...
 
 ##@ Build
@@ -172,14 +172,15 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
-GOVULNCHECK ?= $(LOCALBIN)/govulncheck
-GOSEC ?= $(LOCALBIN)/gosec
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GO_TOOLCHAIN_VERSION := $(shell go env GOVERSION)
+GOVULNCHECK = $(LOCALBIN)/govulncheck-$(GOVULNCHECK_VERSION)-$(GO_TOOLCHAIN_VERSION)
+GOSEC = $(LOCALBIN)/gosec-$(GOSEC_VERSION)-$(GO_TOOLCHAIN_VERSION)
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(GO_TOOLCHAIN_VERSION)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
 CONTROLLER_TOOLS_VERSION ?= v0.17.1
-GOVULNCHECK_VERSION ?= v1.3.0
+GOVULNCHECK_VERSION ?= v1.6.0
 GOSEC_VERSION ?= v2.22.5
 GOLANGCI_LINT_VERSION ?= v1.64.8
 
@@ -204,19 +205,19 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: govulncheck
-govulncheck: $(GOVULNCHECK) ## Download govulncheck locally if necessary. If wrong version is installed, it will be overwritten.
-$(GOVULNCHECK): $(LOCALBIN)
-	test -s $(LOCALBIN)/govulncheck && $(LOCALBIN)/govulncheck -version | grep -q $(GOVULNCHECK_VERSION) || \
+govulncheck: $(GOVULNCHECK) ## Download govulncheck locally if necessary.
+$(GOVULNCHECK): | $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
+	mv $(LOCALBIN)/govulncheck $(GOVULNCHECK)
 
 .PHONY: gosec
-gosec: $(GOSEC) ## Download gosec locally if necessary. If wrong version is installed, it will be overwritten.
-$(GOSEC): $(LOCALBIN)
-	test -s $(LOCALBIN)/gosec && $(LOCALBIN)/gosec -version | grep -q $(GOSEC_VERSION) || \
+gosec: $(GOSEC) ## Download gosec locally if necessary.
+$(GOSEC): | $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION)
+	mv $(LOCALBIN)/gosec $(GOSEC)
 
 .PHONY: golangci-lint
-golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary. If wrong version is installed, it will be overwritten.
-$(GOLANGCI_LINT): $(LOCALBIN)
-	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOLANGCI_LINT_VERSION) || \
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): | $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	mv $(LOCALBIN)/golangci-lint $(GOLANGCI_LINT)
