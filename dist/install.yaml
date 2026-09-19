@@ -421,7 +421,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: docker.io/norseto/taint-remover:v0.6.0-alpha.1
+        image: docker.io/norseto/taint-remover:v0.6.0-alpha.2
         livenessProbe:
           httpGet:
             path: /healthz
