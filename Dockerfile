@@ -1,5 +1,5 @@
 # Use the native build platform to avoid emulating the Go compiler.
-FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.9-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG GITVERSION
