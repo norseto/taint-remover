@@ -74,6 +74,7 @@
 
   "remoteUser": "vscode",
   "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "sudo chown \"$(id -u)\":\"$(id -g)\" \"$HOME/.codex/app-server-control\" \"$HOME/.codex/app-server-daemon\"",
 
   "mounts": [
     "type=volume,consistency=delegated,source=vscode-aws-cred,target=/home/vscode/.aws",
